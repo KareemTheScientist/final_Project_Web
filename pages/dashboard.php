@@ -1,406 +1,220 @@
+<?php
+// Start session and include configuration
+require_once '../config/init.php';
+require_once '../db.php';
+
+// Redirect to login if not authenticated
+requireLogin('../pages/login.php');
+
+// Initialize variables with default values
+$user = null;
+$recent_orders = [];
+$order_stats = [
+    'total_orders' => 0,
+    'completed_orders' => 0,
+    'pending_orders' => 0
+];
+$error_message = '';
+
+try {
+    // Get current user data
+    $stmt = $pdo->prepare("SELECT id, username, email, created_at FROM users WHERE id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $user = $stmt->fetch();
+    
+    if (!$user) {
+        // User doesn't exist in database (session inconsistency)
+        session_unset();
+        session_destroy();
+        header('Location: ../pages/login.php');
+        exit();
+    }
+    
+    // Get recent orders (5 most recent)
+    $orders_stmt = $pdo->prepare("
+        SELECT o.id, o.order_date, o.status, o.total_amount, 
+               COUNT(oi.id) as item_count 
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.user_id = ? 
+        GROUP BY o.id
+        ORDER BY o.order_date DESC 
+        LIMIT 5
+    ");
+    $orders_stmt->execute([$_SESSION['user_id']]);
+    $recent_orders = $orders_stmt->fetchAll();
+    
+    // Get order statistics
+    $stats_stmt = $pdo->prepare("
+        SELECT 
+            COUNT(*) as total_orders,
+            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders
+        FROM orders 
+        WHERE user_id = ?
+    ");
+    $stats_stmt->execute([$_SESSION['user_id']]);
+    $order_stats = $stats_stmt->fetch() ?: $order_stats;
+    
+} catch (PDOException $e) {
+    error_log("Dashboard Error: " . $e->getMessage());
+    $error_message = "We're experiencing technical difficulties. Some data may not be available.";
+}
+
+// Set page title
+$page_title = "Dashboard - " . htmlspecialchars($user['username'] ?? 'User');
+
+// Include header
+include '../includes/header.php';
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>nabta | Smart Indoor Gardens</title>
+    <?php include '../includes/header.php'; ?>
     <style>
-        /* ===== Global Styles ===== */
-        :root {
-            --primary: #2e7d32;
-            --primary-light: #4CAF50;
-            --dark: #263238;
-            --light: #f5f5f6;
-            --gray: #607d8b;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        }
-        
-        body {
-            color: var(--dark);
-            line-height: 1.6;
-        }
-        
-        .container {
+        .dashboard {
             max-width: 1200px;
-            margin: 0 auto;
+            margin: 40px auto;
             padding: 0 20px;
         }
         
-        .btn {
-            display: inline-block;
-            background: var(--primary);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn:hover {
-            background: var(--primary-light);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        
-        .section {
-            padding: 80px 0;
-        }
-        
-        .section-title {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
-            color: var(--primary);
-            text-align: center;
-        }
-        
-        /* ===== Hero Section ===== */
-        .hero {
-            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1598880940080-ff9a29891b85');
-            background-size: cover;
-            background-position: center;
-            height: 80vh;
+        .dashboard-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            text-align: center;
-            color: white;
-            padding-top: 80px;
-        }
-        
-        .hero-content {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-        }
-        
-        .hero p {
-            font-size: 1.2rem;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
         }
         
-        /* ===== Products Section ===== */
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            margin-top: 50px;
-        }
-        
-        .product-card {
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
-        
-        .product-card:hover {
-            transform: translateY(-10px);
-        }
-        
-        .product-img {
-            height: 200px;
-            overflow: hidden;
-        }
-        
-        .product-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s;
-        }
-        
-        .product-card:hover .product-img img {
-            transform: scale(1.1);
-        }
-        
-        .product-info {
-            padding: 20px;
-        }
-        
-        .product-info h3 {
-            font-size: 1.3rem;
-            margin-bottom: 10px;
-        }
-        
-        .product-info p {
-            color: var(--gray);
-            margin-bottom: 15px;
-        }
-        
-        .price {
-            font-weight: bold;
-            color: var(--primary);
-            font-size: 1.2rem;
-        }
-        
-        /* ===== Benefits Section ===== */
-        .benefits {
-            background: var(--light);
-        }
-        
-        .benefits-grid {
+        .dashboard-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            margin-top: 50px;
-        }
-        
-        .benefit-card {
-            text-align: center;
-            padding: 30px;
-        }
-        
-        .benefit-icon {
-            font-size: 3rem;
-            color: var(--primary);
-            margin-bottom: 20px;
-        }
-        
-        .benefit-card h3 {
-            margin-bottom: 15px;
-        }
-        
-        /* ===== Footer ===== */
-        footer {
-            background: var(--dark);
-            color: white;
-            padding: 60px 0 20px;
-        }
-        
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 40px;
+            gap: 20px;
             margin-bottom: 40px;
         }
         
-        .footer-col h3 {
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            color: var(--primary-light);
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
         }
         
-        .footer-col ul {
-            list-style: none;
+        .stat-card h3 {
+            color: var(--gray);
+            font-size: 1rem;
+            margin-bottom: 15px;
         }
         
-        .footer-col li {
-            margin-bottom: 10px;
+        .stat-card .value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--dark);
         }
         
-        .footer-col a {
-            color: #cfd8dc;
-            text-decoration: none;
-            transition: color 0.3s;
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #c62828;
         }
         
-        .footer-col a:hover {
-            color: white;
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
         }
         
-        .copyright {
-            text-align: center;
-            padding-top: 20px;
-            border-top: 1px solid #37474f;
-            color: #cfd8dc;
+        .order-table th, .order-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
         }
     </style>
 </head>
 <body>
-    <!-- Navbar will be included from navbar.php -->
-    <?php include 'navbar.php'; ?>
+    <main class="dashboard">
+        <?php if (!empty($error_message)): ?>
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i> <?= $error_message ?>
+            </div>
+        <?php endif; ?>
 
-    <!-- ===== Hero Section ===== -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1>Grow Fresh Plants Effortlessly</h1>
-                <p>Smart indoor gardens that take care of your plants automatically</p>
-                <a href="#" class="btn">Shop Now</a>
+        <div class="dashboard-header">
+            <div class="welcome-message">
+                <h1><i class="fas fa-leaf"></i> Welcome back, <?= htmlspecialchars($user['username'] ?? 'User') ?>!</h1>
+                <p>Here's your personalized gardening dashboard</p>
+            </div>
+            <a href="../pages/cart.php" class="btn" style="background: var(--primary); color: white; padding: 10px 15px; border-radius: 4px;">
+                <i class="fas fa-shopping-cart"></i> View Cart (<?= $_SESSION['cart']['count'] ?? 0 ?>)
+            </a>
+        </div>
+
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <h3><i class="fas fa-clipboard-list"></i> Total Orders</h3>
+                <div class="value"><?= $order_stats['total_orders'] ?></div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-clock"></i> Pending Orders</h3>
+                <div class="value"><?= $order_stats['pending_orders'] ?></div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-check-circle"></i> Completed</h3>
+                <div class="value"><?= $order_stats['completed_orders'] ?></div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-calendar-alt"></i> Member Since</h3>
+                <div class="value"><?= date('M Y', strtotime($user['created_at'])) ?></div>
             </div>
         </div>
-    </section>
 
-    <!-- ===== Smart Gardens Section ===== -->
-    <section class="section">
-        <div class="container">
-            <h2 class="section-title">Smart Gardens</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/smartgarden3.jpg" alt="Smart Garden 3">
-                    </div>
-                    <div class="product-info">
-                        <h3>Smart Garden 3</h3>
-                        <p>Compact indoor garden for growing 3 plants</p>
-                        <p class="price">$99.95</p>
-                        <a href="#" class="btn">View Details</a>
-                    </div>
-                </div>
-                
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/martgarden9.jpg" alt="Smart Garden 9">
-                    </div>
-                    <div class="product-info">
-                        <h3>Smart Garden 9</h3>
-                        <p>Larger garden for growing 9 plants at once</p>
-                        <p class="price">$149.95</p>
-                        <a href="#" class="btn">View Details</a>
-                    </div>
-                </div>
-                
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/wallfarm.jpg" alt="Wall Farm">
-                    </div>
-                    <div class="product-info">
-                        <h3>Wall Farm</h3>
-                        <p>Vertical garden for growing 24 plants</p>
-                        <p class="price">$299.95</p>
-                        <a href="#" class="btn">View Details</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Plant Pods Section ===== -->
-    <section class="section" style="background: var(--light);">
-        <div class="container">
-            <h2 class="section-title">Plant Pods</h2>
-            <div class="products-grid">
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/basil.jpg" alt="Basil">
-                    </div>
-                    <div class="product-info">
-                        <h3>Basil</h3>
-                        <p>Fresh Italian basil for your kitchen</p>
-                        <p class="price">$4.95</p>
-                        <a href="./plants.php" class="btn">View Details</a>
-                    </div>
-                </div>
-                
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/tomato.jpg" alt="Tomato">
-                    </div>
-                    <div class="product-info">
-                        <h3>Cherry Tomato</h3>
-                        <p>Sweet mini tomatoes for salads</p>
-                        <p class="price">$5.95</p>
-                        <a href="./plants.php" class="btn">View Details</a>
-                    </div>
-                </div>
-                
-                <div class="product-card">
-                    <div class="product-img">
-                        <img src="./img/lettuce.jpg" alt="Lettuce">
-                    </div>
-                    <div class="product-info">
-                        <h3>Butterhead Lettuce</h3>
-                        <p>Tender lettuce for fresh salads</p>
-                        <p class="price">$4.95</p>
-                        <a href="./plants.php" class="btn">View Details</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Benefits Section ===== -->
-    <section class="section benefits">
-        <div class="container">
-            <h2 class="section-title">Why Choose Us</h2>
-            <div class="benefits-grid">
-                <div class="benefit-card">
-                    <div class="benefit-icon">🌱</div>
-                    <h3>No Green Thumb Needed</h3>
-                    <p>Our smart technology handles watering and nutrients automatically</p>
-                </div>
-                
-                <div class="benefit-card">
-                    <div class="benefit-icon">💧</div>
-                    <h3>Save Water</h3>
-                    <p>Uses 95% less water than traditional gardening</p>
-                </div>
-                
-                <div class="benefit-card">
-                    <div class="benefit-icon">🌞</div>
-                    <h3>Year-Round Growth</h3>
-                    <p>Grow fresh herbs and veggies any time of year</p>
-                </div>
-                
-                <div class="benefit-card">
-                    <div class="benefit-icon">🚚</div>
-                    <h3>Free Shipping</h3>
-                    <p>On all orders over $50 in the continental US</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ===== Footer ===== -->
-    <footer>
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h3>Products</h3>
-                    <ul>
-                        <li><a href="#">Smart Gardens</a></li>
-                        <li><a href="#">Plant Pods</a></li>
-                        <li><a href="#">Accessories</a></li>
-                        <li><a href="#">Gift Cards</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Company</h3>
-                    <ul>
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Sustainability</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Press</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Support</h3>
-                    <ul>
-                        <li><a href="#">FAQs</a></li>
-                        <li><a href="#">Shipping</a></li>
-                        <li><a href="#">Returns</a></li>
-                        <li><a href="#">Contact Us</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-col">
-                    <h3>Connect</h3>
-                    <ul>
-                        <li><a href="#">Instagram</a></li>
-                        <li><a href="#">Facebook</a></li>
-                        <li><a href="#">Twitter</a></li>
-                        <li><a href="#">YouTube</a></li>
-                    </ul>
-                </div>
-            </div>
+        <div class="dashboard-section">
+            <h2><i class="fas fa-clock"></i> Recent Orders</h2>
             
-            <div class="copyright">
-                <p>&copy; 2025 nabta corporation. All rights reserved.</p>
-            </div>
+            <?php if (!empty($recent_orders)): ?>
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($recent_orders as $order): ?>
+                        <tr>
+                            <td>#<?= $order['id'] ?></td>
+                            <td><?= date('M d, Y', strtotime($order['order_date'])) ?></td>
+                            <td><?= $order['item_count'] ?></td>
+                            <td>$<?= number_format($order['total_amount'], 2) ?></td>
+                            <td>
+                                <span style="padding: 6px 12px; border-radius: 20px; background: <?= 
+                                    $order['status'] === 'completed' ? '#E8F5E9' : 
+                                    ($order['status'] === 'pending' ? '#FFF3E0' : '#E3F2FD') 
+                                ?>; color: <?= 
+                                    $order['status'] === 'completed' ? '#2E7D32' : 
+                                    ($order['status'] === 'pending' ? '#E65100' : '#1565C0') 
+                                ?>;">
+                                    <?= ucfirst($order['status']) ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <p>You haven't placed any orders yet. <a href="../pages/plants.php" style="color: var(--primary);">Start shopping!</a></p>
+            <?php endif; ?>
         </div>
-    </footer>
+    </main>
+
+    <?php include '../includes/footer.php'; ?>
 </body>
 </html>

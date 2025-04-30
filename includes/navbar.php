@@ -6,8 +6,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Cart data
 $cart_count = $_SESSION['cart']['count'] ?? 0;
-$cart_total = $_SESSION['cart']['total'] ?? 0;
-$cart_items = $_SESSION['cart']['items'] ?? [];
 $current_user = $_SESSION['user'] ?? null;
 ?>
 
@@ -176,87 +174,6 @@ $current_user = $_SESSION['user'] ?? null;
             font-weight: bold;
         }
 
-        .cart-preview {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            width: 300px;
-            background: var(--white);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            padding: 15px;
-            display: none;
-            z-index: 100;
-        }
-
-        .nav-cart:hover .cart-preview {
-            display: block;
-        }
-
-        .cart-items {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-        }
-
-        .cart-item {
-            display: flex;
-            gap: 15px;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .cart-item:last-child {
-            border-bottom: none;
-        }
-
-        .cart-item img {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 4px;
-        }
-
-        .cart-item-info h4 {
-            margin: 0;
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-
-        .cart-item-info p {
-            margin: 5px 0 0;
-            font-size: 0.85rem;
-            color: var(--gray);
-        }
-
-        .cart-summary {
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        .cart-summary p {
-            display: flex;
-            justify-content: space-between;
-            margin: 0 0 15px;
-            font-weight: 500;
-        }
-
-        .cart-summary .btn {
-            display: block;
-            text-align: center;
-            padding: 10px;
-            background: var(--primary);
-            color: var(--white);
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background 0.3s;
-        }
-
-        .cart-summary .btn:hover {
-            background: var(--primary-dark);
-        }
-
         /* Auth Buttons */
         .auth-buttons {
             display: flex;
@@ -292,6 +209,35 @@ $current_user = $_SESSION['user'] ?? null;
         .btn-signup:hover {
             background: var(--primary-dark);
             border-color: var(--primary-dark);
+        }
+
+        /* User Dropdown */
+        .user-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .user-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         /* Mobile Menu */
@@ -349,10 +295,6 @@ $current_user = $_SESSION['user'] ?? null;
                 margin-left: auto;
                 margin-right: 15px;
             }
-
-            .cart-preview {
-                right: -20px;
-            }
         }
 
         @media (max-width: 576px) {
@@ -372,8 +314,8 @@ $current_user = $_SESSION['user'] ?? null;
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
-                <a href="../index.php">
-                    <img src="../assets/images/logo.png" alt="Nabta Logo">
+                <a href="index.php">
+                    <img src="assets/images/logo.png" alt="Nabta Logo">
                     Nabta
                 </a>
             </div>
@@ -383,90 +325,56 @@ $current_user = $_SESSION['user'] ?? null;
             </div>
 
             <ul class="nav-links">
-                <li><a href="../index.php" class="<?= basename($_SERVER['PHP_SELF']) === 'index.php' ? 'active' : '' ?>">Home</a></li>
+                <li><a href="index.php" class="<?= basename($_SERVER['PHP_SELF']) === 'index.php' ? 'active' : '' ?>">Home</a></li>
                 
                 <li class="dropdown">
-                    <a href="../pages/plants.php" class="<?= basename($_SERVER['PHP_SELF']) === 'plants.php' ? 'active' : '' ?>">
+                    <a href="plants.php" class="<?= basename($_SERVER['PHP_SELF']) === 'plants.php' ? 'active' : '' ?>">
                         Plants <i class="fas fa-chevron-down"></i>
                     </a>
                     <div class="dropdown-content">
-                        <a href="../pages/plants.php?category=herbs"><i class="fas fa-leaf"></i> Herbs</a>
-                        <a href="../pages/plants.php?category=vegetables"><i class="fas fa-carrot"></i> Vegetables</a>
-                        <a href="../pages/plants.php?category=flowers"><i class="fas fa-spa"></i> Flowers</a>
+                        <a href="plants.php?category=herbs"><i class="fas fa-leaf"></i> Herbs</a>
+                        <a href="plants.php?category=vegetables"><i class="fas fa-carrot"></i> Vegetables</a>
+                        <a href="plants.php?category=flowers"><i class="fas fa-spa"></i> Flowers</a>
                         <div class="dropdown-divider"></div>
-                        <a href="../pages/plants.php"><i class="fas fa-store"></i> All Plants</a>
+                        <a href="plants.php"><i class="fas fa-store"></i> All Plants</a>
                     </div>
                 </li>
                 
-                <li><a href="../pages/products.php" class="<?= basename($_SERVER['PHP_SELF']) === 'products.php' ? 'active' : '' ?>">Products</a></li>
-                <li><a href="../pages/about.php" class="<?= basename($_SERVER['PHP_SELF']) === 'about.php' ? 'active' : '' ?>">About</a></li>
-                <li><a href="../pages/contact.php" class="<?= basename($_SERVER['PHP_SELF']) === 'contact.php' ? 'active' : '' ?>">Contact</a></li>
+                <li><a href="products.php" class="<?= basename($_SERVER['PHP_SELF']) === 'products.php' ? 'active' : '' ?>">Products</a></li>
+                <li><a href="about.php" class="<?= basename($_SERVER['PHP_SELF']) === 'about.php' ? 'active' : '' ?>">About</a></li>
+                <li><a href="contact.php" class="<?= basename($_SERVER['PHP_SELF']) === 'contact.php' ? 'active' : '' ?>">Contact</a></li>
             </ul>
 
             <div class="nav-user-section">
-                <?php if (isset($_SESSION['user'])): ?>
-                    <!-- Logged In User -->
-                    <div class="dropdown">
-                        <div class="user-info">
+                <?php if (isset($current_user)): ?>
+                    <div class="nav-cart">
+                        <a href="cart.php" class="cart-link">
+                            <i class="fas fa-shopping-cart"></i>
+                            <?php if ($cart_count > 0): ?>
+                                <span class="cart-count"><?= $cart_count ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </div>
+
+                    <div class="user-dropdown">
+                        <button class="user-dropdown-toggle">
                             <div class="user-avatar">
-                                <?= strtoupper(substr($_SESSION['user']['username'], 0, 1)) ?>
+                                <?= strtoupper(substr($current_user['username'], 0, 1)) ?>
                             </div>
-                            <span class="user-name"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
-                        </div>
-                        <div class="dropdown-content">
-                            <a href="../pages/account.php"><i class="fas fa-user"></i> My Account</a>
-                            <a href="../pages/orders.php"><i class="fas fa-clipboard-list"></i> My Orders</a>
+                            <span><?= htmlspecialchars($current_user['username']) ?></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-content" style="right: 0; left: auto;">
+                            <a href="account.php"><i class="fas fa-user"></i> My Account</a>
+                            <a href="orders.php"><i class="fas fa-clipboard-list"></i> My Orders</a>
                             <div class="dropdown-divider"></div>
                             <a href="../actions/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
                         </div>
                     </div>
-
-                    <!-- Cart -->
-                    <div class="nav-cart">
-                        <a href="../pages/cart.php" class="cart-link">
-                            <i class="fas fa-shopping-cart"></i>
-                            <?php if ($cart_count > 0): ?>
-                                <span class="cart-count"><?= $cart_count ?></span>
-                            <?php endif; ?>
-                        </a>
-                        
-                        <?php if ($cart_count > 0): ?>
-                        <div class="cart-preview">
-                            <div class="cart-items">
-                                <?php foreach ($cart_items as $item): ?>
-                                <div class="cart-item">
-                                    <img src="../<?= htmlspecialchars($item['image']) ?>" alt="<?= htmlspecialchars($item['name']) ?>">
-                                    <div class="cart-item-info">
-                                        <h4><?= htmlspecialchars($item['name']) ?></h4>
-                                        <p><?= $item['quantity'] ?> × $<?= number_format($item['price'], 2) ?></p>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                            <div class="cart-summary">
-                                <p>
-                                    <span>Subtotal:</span>
-                                    <span>$<?= number_format($cart_total, 2) ?></span>
-                                </p>
-                                <a href="../pages/cart.php" class="btn">View Cart</a>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-
                 <?php else: ?>
-                    <!-- Guest User -->
                     <div class="auth-buttons">
-                        <a href="../pages/login.php" class="btn-login">Login</a>
-                        <a href="../pages/register.php" class="btn-signup">Sign Up</a>
-                    </div>
-                    <div class="nav-cart">
-                        <a href="../pages/cart.php" class="cart-link">
-                            <i class="fas fa-shopping-cart"></i>
-                            <?php if ($cart_count > 0): ?>
-                                <span class="cart-count"><?= $cart_count ?></span>
-                            <?php endif; ?>
-                        </a>
+                        <a href="login.php" class="btn-login">Login</a>
+                        <a href="register.php" class="btn-signup">Sign Up</a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -482,13 +390,31 @@ $current_user = $_SESSION['user'] ?? null;
                 '<i class="fas fa-times"></i>';
         });
 
-        // Close dropdowns when clicking outside (mobile)
+        // Close mobile menu when clicking outside
         document.addEventListener('click', function(e) {
             if (window.innerWidth <= 992) {
-                if (!e.target.closest('.dropdown') && !e.target.closest('.mobile-menu-btn')) {
+                if (!e.target.closest('.nav-container')) {
                     document.querySelector('.nav-links').classList.remove('active');
                     document.querySelector('.mobile-menu-btn').innerHTML = '<i class="fas fa-bars"></i>';
                 }
+            }
+        });
+
+        // Dropdown toggle for user menu
+        document.querySelector('.user-dropdown-toggle')?.addEventListener('click', function() {
+            this.nextElementSibling.style.display = 
+                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Close dropdowns when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.matches('.user-dropdown-toggle')) {
+                const dropdowns = document.querySelectorAll('.dropdown-content');
+                dropdowns.forEach(dropdown => {
+                    if (dropdown.style.display === 'block') {
+                        dropdown.style.display = 'none';
+                    }
+                });
             }
         });
     </script>

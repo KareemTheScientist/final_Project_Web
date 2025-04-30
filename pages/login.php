@@ -1,107 +1,118 @@
 <?php
-include 'db.php';
+require_once '../config/init.php';
 
-// Start secure session
-session_start([
-    'cookie_lifetime' => 86400, // 1 day
-    'cookie_secure' => true,
-    'cookie_httponly' => true,
-    'cookie_samesite' => 'Lax',
-    'use_strict_mode' => true
-]);
+// Redirect if already logged in
+if (isLoggedIn()) {
+    header('Location: dashboard.php');
+    exit();
+}
 
 $error = '';
+$username = '';
+$remember = false;
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = trim($_POST['username']);
-    $password = trim($_POST['password']);
-
-    if (empty($username) || empty($password)) {
-        $error = 'Please enter both username and password.';
-    } else {
-        try {
-            // Query using either username or email
-            $stmt = $conn->prepare("SELECT id, username, email, password FROM users WHERE username = :username OR email = :username");
-            $stmt->bindParam(':username', $username);
-            $stmt->execute();
+// Handle remember me cookie (before processing POST to prevent double execution)
+if (empty($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
+    try {
+        $tokenParts = explode(':', $_COOKIE['remember_me']);
+        if (count($tokenParts) === 2) {
+            list($userId, $token) = $tokenParts;
             
-            if ($stmt->rowCount() == 1) {
+            $stmt = $pdo->prepare("SELECT id, username, email FROM users 
+                                  WHERE id = :id AND remember_token = :token 
+                                  AND token_expires > NOW()");
+            $stmt->execute([':id' => $userId, ':token' => $token]);
+            
+            if ($stmt->rowCount() === 1) {
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
-                if (password_verify($password, $user['password'])) {
-                    // Set session with available data (using username as name if name column doesn't exist)
-                    $_SESSION['user'] = [
-                        'id' => $user['id'],
-                        'username' => $user['username'],
-                        'name' => $user['username'], // Using username as display name
-                        'email' => $user['email']
-                    ];
-                    
-                    // Regenerate session ID for security
-                    session_regenerate_id(true);
-                    
-                    // Set remember me cookie if checked
-                    if (isset($_POST['remember'])) {
-                        $cookieValue = base64_encode($user['id'] . ':' . hash('sha256', $user['password']));
-                        setcookie('remember_me', $cookieValue, time() + 86400 * 30, '/', '', true, true);
-                    }
-                    
-                    // Redirect to dashboard
-                    header('Location: dashboard.php');
-                    exit();
-                } else {
-                    $error = 'Invalid password.';
-                }
-            } else {
-                $error = 'Username/email not found.';
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user'] = [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'email' => $user['email']
+                ];
+                
+                session_regenerate_id(true);
+                header('Location: dashboard.php');
+                exit();
             }
-        } catch(PDOException $e) {
-            $error = 'Database error: ' . $e->getMessage();
         }
+        // Invalid token - clear cookie
+        setcookie('remember_me', '', time() - 3600, '/', '', true, true);
+    } catch (Exception $e) {
+        error_log('Remember me error: ' . $e->getMessage());
+        setcookie('remember_me', '', time() - 3600, '/', '', true, true);
     }
 }
 
-// Check for remember me cookie
-if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
-    try {
-        $cookieParts = explode(':', base64_decode($_COOKIE['remember_me']));
-        if (count($cookieParts) === 2) {
-            $userId = $cookieParts[0];
-            $passwordHash = $cookieParts[1];
+// Process login form
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+    $remember = isset($_POST['remember']);
+    
+    if (empty($username) || empty($password)) {
+        $error = 'Please enter both username and password';
+    } else {
+        try {
+            $stmt = $pdo->prepare("SELECT id, username, password, email FROM users 
+                                 WHERE username = :username OR email = :email");
+            $stmt->execute([':username' => $username, ':email' => $username]);
             
-            $stmt = $conn->prepare("SELECT id, username, email, password FROM users WHERE id = :id");
-            $stmt->bindParam(':id', $userId);
-            $stmt->execute();
-            
-            if ($stmt->rowCount() == 1) {
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (hash('sha256', $user['password']) === $passwordHash) {
+            if ($user = $stmt->fetch()) {
+                if (password_verify($password, $user['password'])) {
+                    // Set session data
+                    $_SESSION['user_id'] = $user['id'];
                     $_SESSION['user'] = [
                         'id' => $user['id'],
                         'username' => $user['username'],
-                        'name' => $user['username'],
                         'email' => $user['email']
                     ];
+                    
+                    // Regenerate session ID
                     session_regenerate_id(true);
-                    header('Location: dashboard.php');
+                    
+                    // Handle remember me
+                    if ($remember) {
+                        $token = bin2hex(random_bytes(32));
+                        $expires = time() + 60 * 60 * 24 * 30; // 30 days
+                        
+                        $stmt = $pdo->prepare("UPDATE users 
+                                              SET remember_token = :token, 
+                                                  token_expires = FROM_UNIXTIME(:expires) 
+                                              WHERE id = :id");
+                        $stmt->execute([
+                            ':token' => $token,
+                            ':expires' => $expires,
+                            ':id' => $user['id']
+                        ]);
+                        
+                        setcookie('remember_me', $user['id'] . ':' . $token, $expires, '/', '', true, true);
+                    }
+                    
+                    // Redirect to intended page
+                    $redirect = $_SESSION['redirect_url'] ?? 'dashboard.php';
+                    unset($_SESSION['redirect_url']);
+                    header("Location: $redirect");
                     exit();
                 }
             }
+            
+            $error = 'Invalid username or password';
+        } catch (PDOException $e) {
+            error_log("Login error: " . $e->getMessage());
+            $error = 'A system error occurred. Please try again later.';
         }
-        // If invalid, clear the cookie
-        setcookie('remember_me', '', time() - 3600, '/');
-    } catch(PDOException $e) {
-        error_log('Remember me error: ' . $e->getMessage());
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to your Nabta account">
     <title>Login | Nabta</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -120,7 +131,7 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
@@ -130,7 +141,7 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('images/login-bg.jpg');
+            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('../assets/images/login-bg.jpg');
             background-size: cover;
             background-position: center;
             padding: 20px;
@@ -159,6 +170,10 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
         .logo img {
             height: 80px;
             transition: transform 0.3s;
+        }
+        
+        .logo img:hover {
+            transform: scale(1.05);
         }
         
         h1 {
@@ -203,6 +218,11 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             top: 38px;
             color: var(--gray);
             cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .input-icon:hover {
+            color: var(--primary);
         }
         
         .btn {
@@ -227,6 +247,10 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             background-color: var(--primary-dark);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
         }
         
         .error {
@@ -281,9 +305,19 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             width: auto;
         }
         
+        .remember-me label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
         .forgot-password a {
             color: var(--primary);
             text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .forgot-password a:hover {
+            text-decoration: underline;
         }
         
         /* Responsive */
@@ -305,8 +339,8 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
 <body>
     <div class="auth-container">
         <div class="logo">
-            <a href="index.php">
-                <img src="./img/nabta.png" alt="Nabta">
+            <a href="../index.php">
+                <img src="../assets/images/logo.png" alt="Nabta">
             </a>
         </div>
         
@@ -319,22 +353,26 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
             </div>
         <?php endif; ?>
         
-        <form action="login.php" method="post" autocomplete="on">
+        <form action="login.php" method="post" autocomplete="on" novalidate>
             <div class="form-group">
                 <label for="username">Username or Email</label>
-                <input type="text" id="username" name="username" value="<?php echo isset($username) ? htmlspecialchars($username) : ''; ?>" required autofocus>
+                <input type="text" id="username" name="username" 
+                       value="<?php echo htmlspecialchars($username); ?>" 
+                       required autofocus autocomplete="username">
                 <i class="fas fa-user input-icon"></i>
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" 
+                       required autocomplete="current-password">
                 <i class="fas fa-eye input-icon" id="togglePassword"></i>
             </div>
             
             <div class="remember-forgot">
                 <div class="remember-me">
-                    <input type="checkbox" id="remember" name="remember">
+                    <input type="checkbox" id="remember" name="remember" 
+                          <?php echo $remember ? 'checked' : '' ?>>
                     <label for="remember">Remember me</label>
                 </div>
                 <div class="forgot-password">
@@ -348,37 +386,39 @@ if (empty($_SESSION['user']) && isset($_COOKIE['remember_me'])) {
         </form>
         
         <div class="auth-footer">
-            Don't have an account? <a href="register.php">Create one</a>
+            Don't have an account? <a href="../pages/register.php">Create one</a>
         </div>
     </div>
 
     <script>
         // Toggle password visibility
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            const icon = this;
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordInput = document.getElementById('password');
+        
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
         });
         
         // Add focus effects
         document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.parentNode.querySelector('label').style.color = 'var(--primary)';
+            const label = input.parentNode.querySelector('label');
+            
+            input.addEventListener('focus', () => {
+                label.style.color = 'var(--primary)';
             });
             
-            input.addEventListener('blur', function() {
-                this.parentNode.querySelector('label').style.color = 'var(--dark)';
+            input.addEventListener('blur', () => {
+                label.style.color = 'var(--dark)';
             });
         });
+        
+        // Prevent form resubmission on refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
     </script>
 </body>
 </html>

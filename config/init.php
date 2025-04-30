@@ -1,83 +1,49 @@
 <?php
-// Enable error reporting
-error_reporting(E_ALL);
+// Error reporting (disable in production)
 ini_set('display_errors', 1);
+error_reporting(E_ALL);
 
-// Start secure session
+// Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
-    session_start([
-        'cookie_lifetime' => 86400,
-        'cookie_secure' => false, // Set to true in production with HTTPS
-        'cookie_httponly' => true,
-        'cookie_samesite' => 'Lax'
+    session_set_cookie_params([
+        'lifetime' => 86400, // 1 day
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']),
+        'httponly' => true,
+        'samesite' => 'Lax'
     ]);
+    session_name('NABTA_SESSID');
+    session_start();
 }
 
-// Database connection with PDO
+// Database connection
 try {
-    $pdo = new PDO('mysql:host=localhost;dbname=nabta;charset=utf8', 'root', '');
+    $pdo = new PDO('mysql:host=localhost;dbname=nabta;charset=utf8mb4', 'root', '');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
+    die("Database connection failed");
 }
 
-// Initialize cart if not exists
-if (!isset($_SESSION['cart'])) {
-    $_SESSION['cart'] = [
-        'items' => [],
-        'count' => 0,
-        'total' => 0
-    ];
+/**
+ * Check login status without redirect
+ */
+function isLoggedIn() {
+    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
 }
 
-// Cart functions
-function updateCartTotals() {
-    $count = 0;
-    $total = 0;
-    
-    foreach ($_SESSION['cart']['items'] as $item) {
-        $count += $item['quantity'];
-        $total += $item['price'] * $item['quantity'];
-    }
-    
-    $_SESSION['cart']['count'] = $count;
-    $_SESSION['cart']['total'] = $total;
-}
-
-function addToCart($plant_id, $quantity = 1) {
-    global $pdo;
-    
-    try {
-        // Get plant data
-        $stmt = $pdo->prepare("SELECT id, name, price, image_url FROM plants WHERE id = ?");
-        $stmt->execute([$plant_id]);
-        $plant = $stmt->fetch(PDO::FETCH_ASSOC);
+/**
+ * Redirect to login if not authenticated
+ */
+function requireLogin($redirectTo = 'login.php') {
+    if (!isLoggedIn()) {
+        // Store current URL for post-login redirect
+        $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
         
-        if (!$plant) return false;
-        
-        // Initialize cart items if needed
-        if (!isset($_SESSION['cart']['items'])) {
-            $_SESSION['cart']['items'] = [];
+        // Ensure we're not already on the login page
+        if (basename($_SERVER['SCRIPT_NAME']) !== basename($redirectTo)) {
+            header("Location: $redirectTo");
+            exit();
         }
-        
-        // Add or update item in cart
-        if (isset($_SESSION['cart']['items'][$plant_id])) {
-            $_SESSION['cart']['items'][$plant_id]['quantity'] += $quantity;
-        } else {
-            $_SESSION['cart']['items'][$plant_id] = [
-                'id' => $plant['id'],
-                'name' => $plant['name'],
-                'price' => $plant['price'],
-                'quantity' => $quantity,
-                'image' => 'assets/images/' . basename($plant['image_url'])
-            ];
-        }
-        
-        updateCartTotals();
-        return true;
-    } catch (PDOException $e) {
-        error_log("Database error: " . $e->getMessage());
-        return false;
     }
 }
-?>
