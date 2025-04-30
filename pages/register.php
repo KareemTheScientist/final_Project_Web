@@ -1,5 +1,12 @@
 <?php
-session_start();
+// Start session with secure settings
+session_start([
+    'cookie_lifetime' => 86400,
+    'cookie_secure' => true,
+    'cookie_httponly' => true,
+    'cookie_samesite' => 'Strict'
+]);
+
 require_once '../config/init.php';
 require_once '../db.php';
 
@@ -68,15 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 ':password' => $hashed_password
             ]);
             
-            $success = 'Registration successful! You can now login.';
-            $_POST = []; // Clear form
+            // OPTION 1: Auto-login after registration (uncomment to use)
+            $user_id = $pdo->lastInsertId();
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['user'] = ['id' => $user_id, 'username' => $username];
+            session_write_close(); // Force session save
+            header('Location: dashboard.php');
+            exit();
             
-            // Optionally log the user in immediately after registration
-            // $user_id = $pdo->lastInsertId();
-            // $_SESSION['user_id'] = $user_id;
-            // $_SESSION['user'] = ['id' => $user_id, 'username' => $username];
-            // header('Location: dashboard.php');
-            // exit();
+            // OPTION 2: Show success message and let user login manually (uncomment to use)
+            // $success = 'Registration successful! You can now login.';
+            // $_POST = []; // Clear form
             
         } catch (PDOException $e) {
             error_log('Registration error: ' . $e->getMessage());
@@ -366,10 +375,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             window.history.replaceState(null, null, window.location.href);
         }
         
-        // Password strength indicator (optional enhancement)
-        document.getElementById('password')?.addEventListener('input', function() {
-            // Add password strength meter logic here if desired
-        });
+        // Password strength indicator
+        const passwordInput = document.getElementById('password');
+        if (passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                const strengthMeter = document.createElement('div');
+                strengthMeter.className = 'password-strength';
+                
+                // Remove existing meter if present
+                const existingMeter = this.parentNode.querySelector('.password-strength');
+                if (existingMeter) {
+                    existingMeter.remove();
+                }
+                
+                // Add strength meter logic here
+                const strength = calculatePasswordStrength(this.value);
+                strengthMeter.textContent = `Strength: ${strength}`;
+                this.parentNode.appendChild(strengthMeter);
+            });
+        }
+        
+        function calculatePasswordStrength(password) {
+            // Implement your password strength algorithm
+            return 'Medium'; // Example
+        }
     </script>
 </body>
 </html>
