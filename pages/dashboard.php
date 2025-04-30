@@ -52,106 +52,12 @@
         .section {
             padding: 80px 0;
         }
-        /* Dropdown Menu */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: white;
-            min-width: 200px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            border-radius: 4px;
-            z-index: 1;
-            top: 100%;
-            left: 0;
-        }
-        
-        .dropdown-content a {
-            color: var(--dark);
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            transition: background 0.3s;
-        }
-        
-        .dropdown-content a:hover {
-            background-color: #f5f5f5;
-            color: var(--primary);
-        }
-        
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-        
-        .dropdown:hover .dropbtn {
-            color: var(--primary);
-        }
         
         .section-title {
             font-size: 2.5rem;
             margin-bottom: 1.5rem;
             color: var(--primary);
             text-align: center;
-        }
-        
-        /* ===== Navbar ===== */
-        header {
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: fixed;
-            width: 100%;
-            z-index: 100;
-        }
-        
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 0;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-        }
-        
-        .logo img {
-            height: 60px;
-            margin-right: 10px;
-        }
-        
-        .logo h1 {
-            font-size: 1.5rem;
-            color: var(--primary);
-        }
-        
-        .nav-links {
-            display: flex;
-            list-style: none;
-        }
-        
-        .nav-links li {
-            margin-left: 30px;
-        }
-        
-        .nav-links a {
-            text-decoration: none;
-            color: var(--dark);
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-        
-        .nav-links a:hover {
-            color: var(--primary);
-        }
-        
-        .auth-buttons .btn {
-            margin-left: 15px;
-            padding: 8px 16px;
         }
         
         /* ===== Hero Section ===== */
@@ -312,12 +218,8 @@
     </style>
 </head>
 <body>
-    <!-- ===== Navbar ===== -->
-    <header>
-    
+    <!-- Navbar will be included from navbar.php -->
     <?php include 'navbar.php'; ?>
-
-</header>
 
     <!-- ===== Hero Section ===== -->
     <section class="hero">
@@ -349,7 +251,7 @@
                 
                 <div class="product-card">
                     <div class="product-img">
-                        <img src="./img/martgarden9.jpg" alt ="Smart Garden 9">
+                        <img src="./img/martgarden9.jpg" alt="Smart Garden 9">
                     </div>
                     <div class="product-info">
                         <h3>Smart Garden 9</h3>
