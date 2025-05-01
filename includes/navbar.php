@@ -1,21 +1,110 @@
 <?php
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// includes/navbar.php
+if (!defined('BASE_URL')) {
+    exit('Direct access not allowed');
 }
 
-// Cart data
-$cart_count = $_SESSION['cart']['count'] ?? 0;
-$current_user = $_SESSION['user'] ?? null;
+// Get current page for active class highlighting
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nabta - Smart Indoor Gardens</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<nav class="navbar">
+    <div class="nav-container">
+        <div class="nav-brand">
+            <a href="<?= url('index.php') ?>">
+                <img src="<?= url('img/logo.png') ?>" alt="Nabta Logo">
+                <span>Nabta</span>
+            </a>
+        </div>
+
+        <button class="mobile-menu-btn" aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <ul class="nav-links">
+            <li><a href="<?= url('index.php') ?>" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">
+                <i class="fas fa-home"></i> Home
+            </a></li>
+            
+            <li class="dropdown">
+                <a href="<?= url('plants.php') ?>" class="<?= $current_page === 'plants.php' ? 'active' : '' ?>">
+                    <i class="fas fa-leaf"></i> Plants <i class="fas fa-chevron-down"></i>
+                </a>
+                <div class="dropdown-content">
+                    <a href="<?= url('plants.php?category=herbs') ?>"><i class="fas fa-leaf"></i> Herbs</a>
+                    <a href="<?= url('plants.php?category=vegetables') ?>"><i class="fas fa-carrot"></i> Vegetables</a>
+                    <a href="<?= url('plants.php?category=flowers') ?>"><i class="fas fa-spa"></i> Flowers</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="<?= url('plants.php') ?>"><i class="fas fa-store"></i> All Plants</a>
+                </div>
+            </li>
+            
+            <li><a href="<?= url('products.php') ?>" class="<?= $current_page === 'products.php' ? 'active' : '' ?>">
+                <i class="fas fa-box-open"></i> Products
+            </a></li>
+            
+            <li><a href="<?= url('cart.php') ?>" class="<?= $current_page === 'cart.php' ? 'active' : '' ?>">
+                <i class="fas fa-shopping-cart"></i> Cart
+                <?php if (isset($_SESSION['cart']['count']) && $_SESSION['cart']['count'] > 0): ?>
+                    <span class="cart-count"><?= $_SESSION['cart']['count'] ?></span>
+                <?php endif; ?>
+            </a></li>
+        </ul>
+
+        <div class="nav-user-section">
+            <div class="user-dropdown">
+                <button class="user-dropdown-toggle">
+                    <div class="user-avatar">
+                        <?= strtoupper(substr($_SESSION['user']['username'], 0, 1)) ?>
+                    </div>
+                    <span><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-content" style="right: 0; left: auto;">
+                    <a href="<?= url('dashboard.php') ?>"><i class="fas fa-user"></i> Dashboard</a>
+                    <a href="<?= url('account.php') ?>"><i class="fas fa-cog"></i> Account Settings</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="<?= url('logout.php') ?>"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<script>
+    // Mobile menu toggle
+    document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
+        const navLinks = document.querySelector('.nav-links');
+        navLinks.classList.toggle('active');
+        this.innerHTML = navLinks.classList.contains('active') 
+            ? '<i class="fas fa-times"></i>' 
+            : '<i class="fas fa-bars"></i>';
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth <= 992) {
+            if (!e.target.closest('.nav-container')) {
+                document.querySelector('.nav-links').classList.remove('active');
+                document.querySelector('.mobile-menu-btn').innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        }
+    });
+
+    // Dropdown toggle for user menu
+    document.querySelector('.user-dropdown-toggle')?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const dropdown = this.nextElementSibling;
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.dropdown-content').forEach(dropdown => {
+            dropdown.style.display = 'none';
+        });
+    });
+</script>
     <style>
         /* Navbar Styles */
         :root {
@@ -309,114 +398,5 @@ $current_user = $_SESSION['user'] ?? null;
             }
         }
     </style>
-</head>
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <a href="index.php">
-                    <img src="assets/images/logo.png" alt="Nabta Logo">
-                    Nabta
-                </a>
-            </div>
-
-            <div class="mobile-menu-btn">
-                <i class="fas fa-bars"></i>
-            </div>
-
-            <ul class="nav-links">
-                <li><a href="index.php" class="<?= basename($_SERVER['PHP_SELF']) === 'index.php' ? 'active' : '' ?>">Home</a></li>
-                
-                <li class="dropdown">
-                    <a href="plants.php" class="<?= basename($_SERVER['PHP_SELF']) === 'plants.php' ? 'active' : '' ?>">
-                        Plants <i class="fas fa-chevron-down"></i>
-                    </a>
-                    <div class="dropdown-content">
-                        <a href="plants.php?category=herbs"><i class="fas fa-leaf"></i> Herbs</a>
-                        <a href="plants.php?category=vegetables"><i class="fas fa-carrot"></i> Vegetables</a>
-                        <a href="plants.php?category=flowers"><i class="fas fa-spa"></i> Flowers</a>
-                        <div class="dropdown-divider"></div>
-                        <a href="plants.php"><i class="fas fa-store"></i> All Plants</a>
-                    </div>
-                </li>
-                
-                <li><a href="products.php" class="<?= basename($_SERVER['PHP_SELF']) === 'products.php' ? 'active' : '' ?>">Products</a></li>
-                <li><a href="about.php" class="<?= basename($_SERVER['PHP_SELF']) === 'about.php' ? 'active' : '' ?>">About</a></li>
-                <li><a href="contact.php" class="<?= basename($_SERVER['PHP_SELF']) === 'contact.php' ? 'active' : '' ?>">Contact</a></li>
-            </ul>
-
-            <div class="nav-user-section">
-                <?php if (isset($current_user)): ?>
-                    <div class="nav-cart">
-                        <a href="cart.php" class="cart-link">
-                            <i class="fas fa-shopping-cart"></i>
-                            <?php if ($cart_count > 0): ?>
-                                <span class="cart-count"><?= $cart_count ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-
-                    <div class="user-dropdown">
-                        <button class="user-dropdown-toggle">
-                            <div class="user-avatar">
-                                <?= strtoupper(substr($current_user['username'], 0, 1)) ?>
-                            </div>
-                            <span><?= htmlspecialchars($current_user['username']) ?></span>
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="dropdown-content" style="right: 0; left: auto;">
-                            <a href="account.php"><i class="fas fa-user"></i> My Account</a>
-                            <a href="orders.php"><i class="fas fa-clipboard-list"></i> My Orders</a>
-                            <div class="dropdown-divider"></div>
-                            <a href="../actions/logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <div class="auth-buttons">
-                        <a href="login.php" class="btn-login">Login</a>
-                        <a href="register.php" class="btn-signup">Sign Up</a>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </nav>
-
-    <script>
-        // Mobile menu toggle
-        document.querySelector('.mobile-menu-btn').addEventListener('click', function() {
-            document.querySelector('.nav-links').classList.toggle('active');
-            this.innerHTML = this.innerHTML.includes('times') ? 
-                '<i class="fas fa-bars"></i>' : 
-                '<i class="fas fa-times"></i>';
-        });
-
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 992) {
-                if (!e.target.closest('.nav-container')) {
-                    document.querySelector('.nav-links').classList.remove('active');
-                    document.querySelector('.mobile-menu-btn').innerHTML = '<i class="fas fa-bars"></i>';
-                }
-            }
-        });
-
-        // Dropdown toggle for user menu
-        document.querySelector('.user-dropdown-toggle')?.addEventListener('click', function() {
-            this.nextElementSibling.style.display = 
-                this.nextElementSibling.style.display === 'block' ? 'none' : 'block';
-        });
-
-        // Close dropdowns when clicking outside
-        window.addEventListener('click', function(e) {
-            if (!e.target.matches('.user-dropdown-toggle')) {
-                const dropdowns = document.querySelectorAll('.dropdown-content');
-                dropdowns.forEach(dropdown => {
-                    if (dropdown.style.display === 'block') {
-                        dropdown.style.display = 'none';
-                    }
-                });
-            }
-        });
-    </script>
 </body>
 </html>

@@ -3,6 +3,9 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
+// Define base URL (add this)
+$base_url = '/FinalProject/final_Project_Web/';
+
 // Secure session configuration
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -36,9 +39,15 @@ function isLoggedIn() {
  * Redirect to login if not authenticated
  */
 function requireLogin($redirectTo = 'login.php') {
+    global $base_url;
     if (!isLoggedIn()) {
         // Store current URL for post-login redirect
         $_SESSION['redirect_url'] = $_SERVER['REQUEST_URI'];
+        
+        // Determine if redirectTo is a relative path or already has base_url
+        if (strpos($redirectTo, '/') !== 0) {
+            $redirectTo = $base_url . 'pages/' . $redirectTo;
+        }
         
         // Ensure we're not already on the login page
         if (basename($_SERVER['SCRIPT_NAME']) !== basename($redirectTo)) {
@@ -46,4 +55,12 @@ function requireLogin($redirectTo = 'login.php') {
             exit();
         }
     }
+}
+
+/**
+ * Get URL with base path (add this function)
+ */
+function url($path = '') {
+    global $base_url;
+    return $base_url . ltrim($path, '/');
 }

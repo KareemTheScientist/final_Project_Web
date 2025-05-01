@@ -3,7 +3,7 @@ require_once '../config/init.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    header('Location: dashboard.php');
+    header('Location: index.php');
     exit();
 }
 
@@ -34,7 +34,7 @@ if (empty($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
                 ];
                 
                 session_regenerate_id(true);
-                header('Location: dashboard.php');
+                header('Location: index.php');
                 exit();
             }
         }
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     // Redirect to intended page
-                    $redirect = $_SESSION['redirect_url'] ?? 'dashboard.php';
+                    $redirect = $_SESSION['redirect_url'] ?? 'index.php';
                     unset($_SESSION['redirect_url']);
                     header("Location: $redirect");
                     exit();
