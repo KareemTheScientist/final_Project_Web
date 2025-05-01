@@ -5,16 +5,14 @@
 define('ROOT_PATH', dirname(__DIR__) . DIRECTORY_SEPARATOR);
 define('BASE_URL', '/FinalProject/final_Project_Web/'); // Adjust if your base URL is different
 
-// Secure session initialization
+// Ensure session starts before any output
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
-        'secure' => isset($_SERVER['HTTPS']),
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
     session_start();
+}
+
+// Initialize cart if not exists
+if (!isset($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
 }
 
 // Database connection setup

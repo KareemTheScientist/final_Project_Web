@@ -267,38 +267,34 @@ include __DIR__ . './includes/header.php';
         
         /* Cart notification styles */
         .cart-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 4px;
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            transform: translateX(150%);
-            transition: transform 0.3s ease;
-            max-width: 300px;
-        }
-        
-        .cart-notification.show {
-            transform: translateX(0);
-        }
-        
-        .cart-notification.error {
-            background: #f44336;
-        }
-        
-        @media (max-width: 768px) {
-            .plants-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 20px;
-            }
-            
-            .plant-image-container {
-                height: 150px;
-            }
-        }
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 4px;
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    transform: translateX(150%);
+    transition: transform 0.3s ease;
+    max-width: 300px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cart-notification.show {
+    transform: translateX(0);
+}
+
+.cart-notification.error {
+    background: #f44336;
+}
+
+.cart-notification i {
+    font-size: 1.2em;
+}
     </style>
 </head>
 <body>
@@ -391,110 +387,131 @@ include __DIR__ . './includes/header.php';
         <?php endif; ?>
     </div>
 
-    <?php include __DIR__ . '/../includes/footer.php'; ?>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Cart notification element
-        const cartNotification = document.getElementById('cart-notification');
+document.addEventListener('DOMContentLoaded', function() {
+    // Cart notification element
+    const cartNotification = document.getElementById('cart-notification');
+    
+    // Show notification function
+    function showNotification(message, isError = false) {
+        cartNotification.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i> ${message}`;
+        cartNotification.className = isError ? 'cart-notification error show' : 'cart-notification show';
         
-        // Show notification function
-        function showNotification(message, isError = false) {
-            cartNotification.textContent = message;
-            cartNotification.className = isError ? 'cart-notification error show' : 'cart-notification show';
-            
-            setTimeout(() => {
-                cartNotification.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Update cart count in navbar
-        function updateCartCount(count) {
-            const cartCountElements = document.querySelectorAll('.cart-count');
-            cartCountElements.forEach(el => {
+        setTimeout(() => {
+            cartNotification.classList.remove('show');
+        }, 3000);
+    }
+    
+    // Update cart count in navbar
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count');
+        cartCountElements.forEach(el => {
+            if (count > 0) {
                 el.textContent = count;
+                if (!el.parentElement.querySelector('.cart-count')) {
+                    const newBadge = document.createElement('span');
+                    newBadge.className = 'cart-count animate-bounce';
+                    newBadge.textContent = count;
+                    el.parentElement.appendChild(newBadge);
+                }
                 el.classList.add('animate-bounce');
                 setTimeout(() => el.classList.remove('animate-bounce'), 500);
-            });
-        }
-        
-        // Quantity controls
-        document.querySelectorAll('.quantity-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const plantId = this.dataset.plantId;
-                const input = document.querySelector(`.quantity-input[data-plant-id="${plantId}"]`);
-                let value = parseInt(input.value);
-                
-                if (this.classList.contains('minus') && value > 1) {
-                    input.value = value - 1;
-                } else if (this.classList.contains('plus') && value < 10) {
-                    input.value = value + 1;
+            } else {
+                const badge = el.parentElement.querySelector('.cart-count');
+                if (badge) {
+                    badge.remove();
                 }
-            });
+            }
         });
-        
-        // Add to cart functionality
-        document.querySelectorAll('.add-to-cart').forEach(button => {
-            button.addEventListener('click', async function() {
-                const plantId = this.dataset.plantId;
-                const plantCard = this.closest('.plant-card');
-                const plantName = plantCard.querySelector('.plant-name').textContent;
-                const quantity = parseInt(plantCard.querySelector('.quantity-input').value);
-                
-                // Disable button during request
-                this.disabled = true;
-                const originalText = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-                
-                try {
-                    const response = await fetch('<?= url('actions/add_to_cart.php') ?>', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: `plant_id=${plantId}&quantity=${quantity}`
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (!response.ok) {
-                        throw new Error(data.message || 'Failed to add to cart');
-                    }
-                    
-                    // Show success notification
-                    showNotification(`${plantName} added to cart (${quantity})`);
-                    
-                    // Update cart count
-                    if (data.cart_count !== undefined) {
-                        updateCartCount(data.cart_count);
-                    }
-                    
-                    // Visual feedback
-                    plantCard.style.boxShadow = '0 0 0 2px #4CAF50';
-                    setTimeout(() => {
-                        plantCard.style.boxShadow = '';
-                    }, 1000);
-                    
-                } catch (error) {
-                    console.error('Error:', error);
-                    showNotification(error.message || 'Failed to add to cart', true);
-                } finally {
-                    // Re-enable button
-                    this.disabled = false;
-                    this.innerHTML = originalText;
-                }
-            });
-        });
-        
-        // Prevent form submission for quantity inputs
-        document.querySelectorAll('.quantity-input').forEach(input => {
-            input.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                }
-            });
+    }
+    
+    // Quantity controls
+    document.querySelectorAll('.quantity-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const plantId = this.dataset.plantId;
+            const input = document.querySelector(`.quantity-input[data-plant-id="${plantId}"]`);
+            let value = parseInt(input.value);
+            
+            if (this.classList.contains('minus') && value > 1) {
+                input.value = value - 1;
+            } else if (this.classList.contains('plus') && value < 10) {
+                input.value = value + 1;
+            }
         });
     });
-    </script>
+    
+    // Add to cart functionality
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', async function() {
+            const plantId = this.dataset.plantId;
+            const plantCard = this.closest('.plant-card');
+            const plantName = plantCard.querySelector('.plant-name').textContent;
+            const quantity = parseInt(plantCard.querySelector('.quantity-input').value);
+            
+            // Disable button during request
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            
+            try {
+                const response = await fetch('<?= url("actions/add_to_cart.php") ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `plant_id=${plantId}&quantity=${quantity}`
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to add to cart');
+                }
+                
+                // Show success notification
+                showNotification(`${plantName} added to cart (${quantity})`);
+                
+                // Update cart count
+                if (data.cart_count !== undefined) {
+                    updateCartCount(data.cart_count);
+                }
+                
+                // Visual feedback
+                plantCard.style.boxShadow = '0 0 0 2px #4CAF50';
+                setTimeout(() => {
+                    plantCard.style.boxShadow = '';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification(error.message || 'Failed to add to cart', true);
+            } finally {
+                // Re-enable button
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        });
+    });
+    
+    // Initialize cart count on page load
+    async function initializeCartCount() {
+        try {
+            const response = await fetch('<?= url("actions/get_cart_count.php") ?>');
+            const data = await response.json();
+            
+            if (response.ok && data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+            }
+        } catch (error) {
+            console.error('Could not load cart count:', error);
+        }
+    }
+    
+    // Call the initialization function
+    initializeCartCount();
+});
+</script>
 </body>
 </html>

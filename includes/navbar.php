@@ -1,12 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/init.php';
 
+
 if (!defined('BASE_URL')) {
     die('Direct access not allowed');
 }
 
 $current_page = basename($_SERVER['PHP_SELF']);
-$cart_count = isset($_SESSION['cart']) ? array_sum(array_column($_SESSION['cart'], 'quantity')) : 0;
+$cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
 ?>
 
 <nav class="navbar">
@@ -130,11 +131,39 @@ $cart_count = isset($_SESSION['cart']) ? array_sum(array_column($_SESSION['cart'
         }
     }
 
-    // Listen for cart updates (for real-time updates from other pages)
-    document.addEventListener('cartUpdated', function() {
-        // This would be triggered by your cart actions
-        animateCartCount();
+   // Listen for cart updates from other pages
+document.addEventListener('cartUpdated', function(e) {
+    const newCount = e.detail.count;
+    const cartLinks = document.querySelectorAll('a[href*="cart.php"]');
+    
+    cartLinks.forEach(link => {
+        let countBadge = link.querySelector('.cart-count');
+        
+        if (newCount > 0) {
+            if (!countBadge) {
+                countBadge = document.createElement('span');
+                countBadge.className = 'cart-count animate-bounce';
+                link.appendChild(countBadge);
+            }
+            countBadge.textContent = newCount;
+            countBadge.classList.add('animate-bounce');
+            setTimeout(() => countBadge.classList.remove('animate-bounce'), 1000);
+        } else if (countBadge) {
+            link.removeChild(countBadge);
+        }
     });
+});
+    
+
+
+// Function to trigger cart update (can be called from any page)
+function updateGlobalCartCount(count) {
+    const event = new CustomEvent('cartUpdated', {
+        detail: { count: count }
+    });
+    document.dispatchEvent(event);
+}
+
 </script>
 
 <style>
