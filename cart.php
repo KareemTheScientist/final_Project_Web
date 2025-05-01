@@ -3,7 +3,7 @@ require_once __DIR__ . '/config/init.php';
 require_auth();
 
 $page_title = "Your Shopping Cart";
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/includes/navbar.php';
 
 // Initialize variables
 $cart_items = [];
@@ -53,7 +53,7 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         <div class="empty-cart">
             <i class="fas fa-shopping-cart fa-3x"></i>
             <p>Your cart is empty</p>
-            <a href="<?= url('plants.php') ?>" class="btn btn-primary">
+            <a href="<?= url('/plants.php') ?>" class="btn btn-primary">
                 <i class="fas fa-leaf"></i> Browse Plants
             </a>
         </div>
@@ -94,14 +94,16 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         </div>
         
         <div class="cart-summary">
-            <div class="total">
-                <span>Total:</span>
-                <span>$<?= number_format($total, 2) ?></span>
-            </div>
-            <a href="<?= url('checkout.php') ?>" class="checkout-btn">
-                <i class="fas fa-credit-card"></i> Proceed to Checkout
-            </a>
-        </div>
+    <div class="total">
+        <span>Total:</span>
+        <span>$<?= number_format($total, 2) ?></span>
+    </div>
+    <a href="./checkout.php" class="checkout-btn">
+    <i class="fas fa-credit-card"></i> Proceed to Checkout
+</a>
+
+</div>
+
     <?php endif; ?>
 </div>
 
@@ -335,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(loadingIndicator);
         
         try {
-            const response = await fetch('<?= url("actions/update_cart.php") ?>', {
+            const response = await fetch('<?= url("/actions/update_cart.php") ?>', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

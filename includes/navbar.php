@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/init.php';
 
-
 if (!defined('BASE_URL')) {
     die('Direct access not allowed');
 }
@@ -13,8 +12,8 @@ $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
 <nav class="navbar">
     <div class="nav-container">
         <div class="nav-brand">
-            <a href="<?= url('index.php') ?>">
-                <img src="<?= url('img/NABTA.png') ?>" alt="Nabta Logo">
+            <a href="<?= url('/index.php') ?>">
+                <img src="<?= url('/img/NABTA.png') ?>" alt="Nabta Logo">
                 <span>Nabta</span>
             </a>
         </div>
@@ -25,32 +24,32 @@ $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
 
         <ul class="nav-links">
             <li>
-                <a href="<?= url('index.php') ?>" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">
+                <a href="<?= url('/index.php') ?>" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">
                     <i class="fas fa-home"></i> Home
                 </a>
             </li>
 
             <li class="dropdown">
-                <a href="<?= url('plants.php') ?>" class="<?= $current_page === 'plants.php' ? 'active' : '' ?>">
+                <a href="<?= url('/plants.php') ?>" class="<?= $current_page === 'plants.php' ? 'active' : '' ?>">
                     <i class="fas fa-leaf"></i> Plants <i class="fas fa-chevron-down"></i>
                 </a>
                 <div class="dropdown-content">
-                    <a href="<?= url('plants.php?category=herbs') ?>"><i class="fas fa-leaf"></i> Herbs</a>
-                    <a href="<?= url('plants.php?category=vegetables') ?>"><i class="fas fa-carrot"></i> Vegetables</a>
-                    <a href="<?= url('plants.php?category=flowers') ?>"><i class="fas fa-spa"></i> Flowers</a>
+                    <a href="<?= url('/plants.php?category=herbs') ?>"><i class="fas fa-leaf"></i> Herbs</a>
+                    <a href="<?= url('/plants.php?category=vegetables') ?>"><i class="fas fa-carrot"></i> Vegetables</a>
+                    <a href="<?= url('/plants.php?category=flowers') ?>"><i class="fas fa-spa"></i> Flowers</a>
                     <div class="dropdown-divider"></div>
-                    <a href="<?= url('plants.php') ?>"><i class="fas fa-store"></i> All Plants</a>
+                    <a href="<?= url('/plants.php') ?>"><i class="fas fa-store"></i> All Plants</a>
                 </div>
             </li>
 
             <li>
-                <a href="<?= url('products.php') ?>" class="<?= $current_page === 'products.php' ? 'active' : '' ?>">
+                <a href="<?= url('/products.php') ?>" class="<?= $current_page === 'products.php' ? 'active' : '' ?>">
                     <i class="fas fa-box-open"></i> Products
                 </a>
             </li>
 
             <li>
-                <a href="<?= url('cart.php') ?>" class="<?= $current_page === 'cart.php' ? 'active' : '' ?>">
+                <a href="<?= url('/cart.php') ?>" class="<?= $current_page === 'cart.php' ? 'active' : '' ?>">
                     <i class="fas fa-shopping-cart"></i> Cart
                     <?php if ($cart_count > 0): ?>
                         <span class="cart-count animate-bounce"><?= $cart_count ?></span>
@@ -70,17 +69,17 @@ $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-content" style="right: 0; left: auto;">
-                        <a href="<?= url('dashboard.php') ?>"><i class="fas fa-user"></i> Dashboard</a>
-                        <a href="<?= url('account.php') ?>"><i class="fas fa-cog"></i> Account Settings</a>
+                        <a href="<?= url('/dashboard.php') ?>"><i class="fas fa-user"></i> Dashboard</a>
+                        <a href="<?= url('/account.php') ?>"><i class="fas fa-cog"></i> Account Settings</a>
                         <div class="dropdown-divider"></div>
-                        <a href="<?= url('logout.php') ?>"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        <a href="<?= url('/logout.php') ?>"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>
             <?php else: ?>
-                <a href="<?= url('login.php') ?>" class="btn-login">
+                <a href="<?= url('/login.php') ?>" class="btn-login">
                     <i class="fas fa-sign-in-alt"></i> Login
                 </a>
-                <a href="<?= url('register.php') ?>" class="btn-signup">
+                <a href="<?= url('/register.php') ?>" class="btn-signup">
                     <i class="fas fa-user-plus"></i> Register
                 </a>
             <?php endif; ?>
@@ -131,39 +130,36 @@ $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
         }
     }
 
-   // Listen for cart updates from other pages
-document.addEventListener('cartUpdated', function(e) {
-    const newCount = e.detail.count;
-    const cartLinks = document.querySelectorAll('a[href*="cart.php"]');
-    
-    cartLinks.forEach(link => {
-        let countBadge = link.querySelector('.cart-count');
+    // Listen for cart updates from other pages
+    document.addEventListener('cartUpdated', function(e) {
+        const newCount = e.detail.count;
+        const cartLinks = document.querySelectorAll('a[href*="cart.php"]');
         
-        if (newCount > 0) {
-            if (!countBadge) {
-                countBadge = document.createElement('span');
-                countBadge.className = 'cart-count animate-bounce';
-                link.appendChild(countBadge);
+        cartLinks.forEach(link => {
+            let countBadge = link.querySelector('.cart-count');
+            
+            if (newCount > 0) {
+                if (!countBadge) {
+                    countBadge = document.createElement('span');
+                    countBadge.className = 'cart-count animate-bounce';
+                    link.appendChild(countBadge);
+                }
+                countBadge.textContent = newCount;
+                countBadge.classList.add('animate-bounce');
+                setTimeout(() => countBadge.classList.remove('animate-bounce'), 1000);
+            } else if (countBadge) {
+                link.removeChild(countBadge);
             }
-            countBadge.textContent = newCount;
-            countBadge.classList.add('animate-bounce');
-            setTimeout(() => countBadge.classList.remove('animate-bounce'), 1000);
-        } else if (countBadge) {
-            link.removeChild(countBadge);
-        }
+        });
     });
-});
-    
 
-
-// Function to trigger cart update (can be called from any page)
-function updateGlobalCartCount(count) {
-    const event = new CustomEvent('cartUpdated', {
-        detail: { count: count }
-    });
-    document.dispatchEvent(event);
-}
-
+    // Function to trigger cart update (can be called from any page)
+    function updateGlobalCartCount(count) {
+        const event = new CustomEvent('cartUpdated', {
+            detail: { count: count }
+        });
+        document.dispatchEvent(event);
+    }
 </script>
 
 <style>
