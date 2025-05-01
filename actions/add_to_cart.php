@@ -1,93 +1,78 @@
 <?php
-require_once '../config/init.php';
-require_once '../db.php';
+require_once __DIR__ . './config/init.php';
 
-// Check if user is logged in (optional - remove if you want guest carts)
-requireLogin('../pages/login.php');
+// Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
-header('Content-Type: application/json');
+// Check if user is logged in
+if (!is_logged_in()) {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Please login to add items to cart']);
+    exit;
+}
 
-$response = ['success' => false, 'message' => '', 'cart_count' => 0];
+// Validate input
+if (!isset($_POST['plant_id']) || !is_numeric($_POST['plant_id'])) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Invalid plant ID']);
+    exit;
+}
+
+$plantId = (int)$_POST['plant_id'];
+$quantity = isset($_POST['quantity']) ? max(1, (int)$_POST['quantity']) : 1;
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Invalid request method');
-    }
-
-    $plant_id = filter_input(INPUT_POST, 'plant_id', FILTER_VALIDATE_INT);
-    $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT, ['options' => ['default' => 1, 'min_range' => 1]]);
-
-    if (!$plant_id) {
-        throw new Exception('Invalid plant ID');
-    }
-
-    // Get plant details from database
-    $stmt = $pdo->prepare("SELECT id, name, price, image_url, stock FROM plants WHERE id = ? AND active = 1");
-    $stmt->execute([$plant_id]);
+    // Verify plant exists and is active
+    $stmt = $pdo->prepare("SELECT id, name, price FROM plants WHERE id = ? AND active = 1");
+    $stmt->execute([$plantId]);
     $plant = $stmt->fetch();
 
     if (!$plant) {
-        throw new Exception('Plant not found or unavailable');
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Plant not found or unavailable']);
+        exit;
     }
 
     // Initialize cart if not exists
     if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [
-            'items' => [],
-            'count' => 0,
-            'total' => 0.00
-        ];
+        $_SESSION['cart'] = [];
     }
 
-    // Check if item already exists in cart
-    if (isset($_SESSION['cart']['items'][$plant_id])) {
-        // Update quantity if enough stock available
-        $new_quantity = $_SESSION['cart']['items'][$plant_id]['quantity'] + $quantity;
-        if ($new_quantity > $plant['stock']) {
-            throw new Exception('Not enough stock available');
-        }
-        $_SESSION['cart']['items'][$plant_id]['quantity'] = $new_quantity;
+    // Add or update item in cart
+    if (isset($_SESSION['cart'][$plantId])) {
+        $_SESSION['cart'][$plantId]['quantity'] += $quantity;
     } else {
-        // Add new item to cart
-        if ($quantity > $plant['stock']) {
-            throw new Exception('Not enough stock available');
-        }
-        $_SESSION['cart']['items'][$plant_id] = [
-            'id' => $plant['id'],
+        $_SESSION['cart'][$plantId] = [
+            'id' => $plantId,
             'name' => $plant['name'],
             'price' => $plant['price'],
-            'quantity' => $quantity,
-            'image' => 'assets/images/' . basename($plant['image_url']),
-            'max_stock' => $plant['stock']
+            'quantity' => $quantity
         ];
     }
 
-    // Update cart totals
-    updateCartTotals();
+    // Calculate total items in cart
+    $cartCount = array_sum(array_column($_SESSION['cart'], 'quantity'));
 
-    $response = [
+    // Return success response
+    header('Content-Type: application/json');
+    echo json_encode([
         'success' => true,
         'message' => 'Item added to cart',
-        'cart_count' => $_SESSION['cart']['count'],
-        'cart_total' => number_format($_SESSION['cart']['total'], 2)
-    ];
+        'cart_count' => $cartCount,
+        'plant_name' => $plant['name']
+    ]);
 
-} catch (Exception $e) {
-    $response['message'] = $e->getMessage();
+} catch (PDOException $e) {
+    error_log("Cart Error: " . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Database error occurred']);
 }
-
-echo json_encode($response);
-
-function updateCartTotals() {
-    $count = 0;
-    $total = 0.00;
-    
-    foreach ($_SESSION['cart']['items'] as $item) {
-        $count += $item['quantity'];
-        $total += $item['price'] * $item['quantity'];
-    }
-    
-    $_SESSION['cart']['count'] = $count;
-    $_SESSION['cart']['total'] = $total;
-}
-?>

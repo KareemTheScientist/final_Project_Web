@@ -21,9 +21,7 @@ C:\xampp\htdocs\FinalProject\final_Project_Web
 
 Folder & File Structure:
 
-css
-Copy
-Edit
+
 final_Project_Web/
 ├── actions/
 │   ├── add_to_cart.php
@@ -38,14 +36,14 @@ final_Project_Web/
 │   ├── header.php
 │   ├── navbar.php
 │   └── footer.php
-├── pages/
-│   ├── cart.php
-│   ├── index.php
-│   ├── login.php
-│   ├── plants.php
-│   └── register.php
-│   ├── logout.php
+
+│├── cart.php
+│├── login.php
+│├── plants.php
+│└── register.php
+│├── logout.php
 ├── db.php
+├── index.php
 Current Progress:
 
 Core pages (login, register, product listings, cart) are implemented.

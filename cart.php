@@ -1,6 +1,6 @@
 <?php
-require_once '../config/init.php';
-require_once '../includes/header.php';
+require_once './config/init.php';
+require_once './includes/header.php';
 ?>
 
 <div class="container">
@@ -105,4 +105,4 @@ require_once '../includes/header.php';
 }
 </style>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once './includes/footer.php'; ?>

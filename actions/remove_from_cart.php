@@ -1,70 +1,58 @@
 <?php
-require_once '../config/init.php';
-require_once '../db.php';
+require_once __DIR__ . './config/init.php';
 
-// Check if user is logged in (optional - remove if you want guest carts)
-requireLogin('../pages/login.php');
+// Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
-header('Content-Type: application/json');
+// Check if user is logged in
+if (!is_logged_in()) {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Please login to modify cart']);
+    exit;
+}
 
-$response = ['success' => false, 'message' => '', 'cart_count' => 0];
+// Validate input
+if (!isset($_POST['plant_id']) || !is_numeric($_POST['plant_id'])) {
+    http_response_code(400);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Invalid plant ID']);
+    exit;
+}
+
+$plantId = (int)$_POST['plant_id'];
 
 try {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        throw new Exception('Invalid request method');
+    // Check if item exists in cart
+    if (!isset($_SESSION['cart'][$plantId])) {
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Item not found in cart']);
+        exit;
     }
 
-    $plant_id = filter_input(INPUT_POST, 'plant_id', FILTER_VALIDATE_INT);
+    // Remove item from cart
+    unset($_SESSION['cart'][$plantId]);
 
-    if (!$plant_id) {
-        throw new Exception('Invalid plant ID');
-    }
+    // Calculate total items in cart
+    $cartCount = isset($_SESSION['cart']) ? array_sum(array_column($_SESSION['cart'], 'quantity')) : 0;
 
-    // Check if cart exists and has the item
-    if (!isset($_SESSION['cart']) || !isset($_SESSION['cart']['items'][$plant_id])) {
-        throw new Exception('Item not found in cart');
-    }
-
-    // Remove the item
-    unset($_SESSION['cart']['items'][$plant_id]);
-
-    // Update cart totals
-    updateCartTotals();
-
-    $response = [
+    // Return success response
+    header('Content-Type: application/json');
+    echo json_encode([
         'success' => true,
         'message' => 'Item removed from cart',
-        'cart_count' => $_SESSION['cart']['count'],
-        'cart_total' => number_format($_SESSION['cart']['total'], 2)
-    ];
+        'cart_count' => $cartCount
+    ]);
 
 } catch (Exception $e) {
-    $response['message'] = $e->getMessage();
+    error_log("Cart Error: " . $e->getMessage());
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Error removing item from cart']);
 }
-
-echo json_encode($response);
-
-function updateCartTotals() {
-    $count = 0;
-    $total = 0.00;
-    
-    if (isset($_SESSION['cart']['items'])) {
-        foreach ($_SESSION['cart']['items'] as $item) {
-            $count += $item['quantity'];
-            $total += $item['price'] * $item['quantity'];
-        }
-    }
-    
-    $_SESSION['cart']['count'] = $count;
-    $_SESSION['cart']['total'] = $total;
-    
-    // If cart is empty, reset it
-    if ($count === 0) {
-        $_SESSION['cart'] = [
-            'items' => [],
-            'count' => 0,
-            'total' => 0.00
-        ];
-    }
-}
-?>

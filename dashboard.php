@@ -1,10 +1,6 @@
 <?php
-// Start session and include configuration
-require_once '../config/init.php';
-require_once '../db.php';
-
-// Redirect to login if not authenticated
-requireLogin('../pages/login.php');
+// index.php at root
+require_once __DIR__ . '/config/init.php';
 
 // Initialize variables with default values
 $user = null;
@@ -16,6 +12,13 @@ $order_stats = [
 ];
 $error_message = '';
 
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    // User not logged in, redirect to login
+    header('Location: login.php');
+    exit();
+}
+
 try {
     // Get current user data
     $stmt = $pdo->prepare("SELECT id, username, email, created_at FROM users WHERE id = ?");
@@ -26,7 +29,7 @@ try {
         // User doesn't exist in database (session inconsistency)
         session_unset();
         session_destroy();
-        header('Location: ../pages/login.php');
+        header('Location: login.php');
         exit();
     }
     
@@ -64,14 +67,17 @@ try {
 // Set page title
 $page_title = "Dashboard - " . htmlspecialchars($user['username'] ?? 'User');
 
-// Include header
-include '../includes/header.php';
+// Include header (only once, at the top of output)
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <?php include '../includes/header.php'; ?>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= $page_title ?></title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .dashboard {
             max-width: 1200px;
@@ -137,6 +143,8 @@ include '../includes/header.php';
     </style>
 </head>
 <body>
+    <?php include __DIR__ . '/includes/navbar.php'; ?>
+    
     <main class="dashboard">
         <?php if (!empty($error_message)): ?>
             <div class="error-message">
@@ -149,7 +157,7 @@ include '../includes/header.php';
                 <h1><i class="fas fa-leaf"></i> Welcome back, <?= htmlspecialchars($user['username'] ?? 'User') ?>!</h1>
                 <p>Here's your personalized gardening dashboard</p>
             </div>
-            <a href="../pages/cart.php" class="btn" style="background: var(--primary); color: white; padding: 10px 15px; border-radius: 4px;">
+            <a href="cart.php" class="btn" style="background: var(--primary); color: white; padding: 10px 15px; border-radius: 4px;">
                 <i class="fas fa-shopping-cart"></i> View Cart (<?= $_SESSION['cart']['count'] ?? 0 ?>)
             </a>
         </div>
@@ -210,11 +218,11 @@ include '../includes/header.php';
                     </tbody>
                 </table>
             <?php else: ?>
-                <p>You haven't placed any orders yet. <a href="../pages/plants.php" style="color: var(--primary);">Start shopping!</a></p>
+                <p>You haven't placed any orders yet. <a href="plants.php" style="color: var(--primary);">Start shopping!</a></p>
             <?php endif; ?>
         </div>
     </main>
 
-    <?php include '../includes/footer.php'; ?>
+    <?php include __DIR__ . '/includes/footer.php'; ?>
 </body>
 </html>

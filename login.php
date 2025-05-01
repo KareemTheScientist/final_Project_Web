@@ -1,44 +1,42 @@
 <?php
-require_once '../config/init.php';
+require_once './config/init.php';
 
 // Redirect if already logged in
-if (isLoggedIn()) {
-    header('Location: index.php');
-    exit();
+if (is_logged_in()) {
+    redirect('dashboard.php'); // or 'dashboard.php' if that's your homepage
 }
 
 $error = '';
 $username = '';
 $remember = false;
 
-// Handle remember me cookie (before processing POST to prevent double execution)
-if (empty($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
+// Handle "remember me" cookie
+if (!is_logged_in() && isset($_COOKIE['remember_me'])) {
     try {
         $tokenParts = explode(':', $_COOKIE['remember_me']);
         if (count($tokenParts) === 2) {
             list($userId, $token) = $tokenParts;
-            
+
             $stmt = $pdo->prepare("SELECT id, username, email FROM users 
-                                  WHERE id = :id AND remember_token = :token 
-                                  AND token_expires > NOW()");
+                                   WHERE id = :id AND remember_token = :token 
+                                   AND token_expires > NOW()");
             $stmt->execute([':id' => $userId, ':token' => $token]);
-            
+
             if ($stmt->rowCount() === 1) {
-                $user = $stmt->fetch(PDO::FETCH_ASSOC);
-                
+                $user = $stmt->fetch();
+
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user'] = [
                     'id' => $user['id'],
                     'username' => $user['username'],
                     'email' => $user['email']
                 ];
-                
+
                 session_regenerate_id(true);
-                header('Location: index.php');
-                exit();
+                redirect('index.php'); // or 'dashboard.php'
             }
         }
-        // Invalid token - clear cookie
+        // Clear invalid cookie
         setcookie('remember_me', '', time() - 3600, '/', '', true, true);
     } catch (Exception $e) {
         error_log('Remember me error: ' . $e->getMessage());
@@ -46,60 +44,56 @@ if (empty($_SESSION['user_id']) && isset($_COOKIE['remember_me'])) {
     }
 }
 
-// Process login form
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = trim($_POST['password'] ?? '');
     $remember = isset($_POST['remember']);
-    
+
     if (empty($username) || empty($password)) {
-        $error = 'Please enter both username and password';
+        $error = 'Please enter both username and password.';
     } else {
         try {
             $stmt = $pdo->prepare("SELECT id, username, password, email FROM users 
-                                 WHERE username = :username OR email = :email");
+                                   WHERE username = :username OR email = :email");
             $stmt->execute([':username' => $username, ':email' => $username]);
-            
+
             if ($user = $stmt->fetch()) {
                 if (password_verify($password, $user['password'])) {
-                    // Set session data
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['user'] = [
                         'id' => $user['id'],
                         'username' => $user['username'],
                         'email' => $user['email']
                     ];
-                    
-                    // Regenerate session ID
+
                     session_regenerate_id(true);
-                    
+
                     // Handle remember me
                     if ($remember) {
                         $token = bin2hex(random_bytes(32));
-                        $expires = time() + 60 * 60 * 24 * 30; // 30 days
-                        
+                        $expires = time() + 60 * 60 * 24 * 30;
+
                         $stmt = $pdo->prepare("UPDATE users 
-                                              SET remember_token = :token, 
-                                                  token_expires = FROM_UNIXTIME(:expires) 
-                                              WHERE id = :id");
+                                               SET remember_token = :token, 
+                                                   token_expires = FROM_UNIXTIME(:expires) 
+                                               WHERE id = :id");
                         $stmt->execute([
                             ':token' => $token,
                             ':expires' => $expires,
                             ':id' => $user['id']
                         ]);
-                        
+
                         setcookie('remember_me', $user['id'] . ':' . $token, $expires, '/', '', true, true);
                     }
-                    
-                    // Redirect to intended page
-                    $redirect = $_SESSION['redirect_url'] ?? 'index.php';
+
+                    $redirect = $_SESSION['redirect_url'] ?? 'dashboard.php';
                     unset($_SESSION['redirect_url']);
-                    header("Location: $redirect");
-                    exit();
+                    redirect($redirect);
                 }
             }
-            
-            $error = 'Invalid username or password';
+
+            $error = 'Invalid username or password.';
         } catch (PDOException $e) {
             error_log("Login error: " . $e->getMessage());
             $error = 'A system error occurred. Please try again later.';
@@ -107,6 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -339,8 +334,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="auth-container">
         <div class="logo">
-            <a href="../index.php">
-                <img src="../assets/images/logo.png" alt="Nabta">
+            <a href="dashboard.php">
+                <img src="./img/NABTA.png" alt="Nabta">
             </a>
         </div>
         
