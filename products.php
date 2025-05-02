@@ -1,59 +1,49 @@
 <?php
-require_once __DIR__ . './config/init.php';
+require_once __DIR__ . '/config/init.php';
 
 // Get current category filter
 $category = isset($_GET['category']) ? strtolower($_GET['category']) : null;
-$valid_categories = ['herbs', 'vegetables', 'flowers'];
-
-// Pagination setup
-$per_page = 12;
-$current_page = max(1, isset($_GET['page']) ? (int)$_GET['page'] : 1);
-$offset = ($current_page - 1) * $per_page;
+$valid_categories = ['pot', 'sensor', 'utility'];
 
 // Initialize variables
-$plants = [];
-$total_plants = 0;
+$featured_products = [];
+$regular_products = [];
 $error = '';
 
 try {
-    // Base query
-    $query = "SELECT * FROM plants WHERE active = 1";
-    $count_query = "SELECT COUNT(*) FROM plants WHERE active = 1";
+    // Get featured products (Smart Gardens & Premium Sensor Kits)
+    $stmt = $pdo->prepare("
+        SELECT * FROM products 
+        WHERE category IN ('pot', 'sensor') AND stock > 0
+        ORDER BY created_at DESC
+        LIMIT 6
+    ");
+    $stmt->execute();
+    $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get regular products (other accessories)
+    $query = "SELECT * FROM products WHERE stock > 0";
+    $params = [];
     
     // Add category filter if valid
     if ($category && in_array($category, $valid_categories)) {
-        $query .= " AND category = :category";
-        $count_query .= " AND category = :category";
+        $query .= " AND category = ?";
+        $params[] = $category;
     }
     
-    // Add sorting
-    $query .= " ORDER BY is_featured DESC, date_added DESC LIMIT :limit OFFSET :offset";
+    $query .= " ORDER BY created_at DESC";
     
-    // Get total count
-    $stmt = $pdo->prepare($count_query);
-    if ($category) {
-        $stmt->bindParam(':category', $category);
-    }
-    $stmt->execute();
-    $total_plants = $stmt->fetchColumn();
-    
-    // Get plants for current page
     $stmt = $pdo->prepare($query);
-    if ($category) {
-        $stmt->bindParam(':category', $category);
-    }
-    $stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $plants = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->execute($params);
+    $regular_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
-    error_log("Plants page error: " . $e->getMessage());
-    $error = "We're having trouble loading plants. Please try again later.";
+    error_log("Products page error: " . $e->getMessage());
+    $error = "We're having trouble loading products. Please try again later.";
 }
 
 // Set page title
-$page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
+$page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
 
 ?>
 
@@ -75,7 +65,7 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             --white: #ffffff;
         }
         
-        .plants-container {
+        .products-container {
             max-width: 1200px;
             margin: 40px auto;
             padding: 0 20px;
@@ -84,6 +74,15 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
         .page-header {
             margin-bottom: 30px;
             text-align: center;
+        }
+        
+        .section-header {
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .category-filters {
@@ -110,14 +109,14 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             color: var(--white);
         }
         
-        .plants-grid {
+        .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 30px;
             margin-bottom: 40px;
         }
         
-        .plant-card {
+        .product-card {
             background: var(--white);
             border-radius: 8px;
             overflow: hidden;
@@ -125,29 +124,29 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             transition: transform 0.3s, box-shadow 0.3s;
         }
         
-        .plant-card:hover {
+        .product-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        .plant-image-container {
+        .product-image-container {
             position: relative;
             height: 200px;
             overflow: hidden;
         }
         
-        .plant-image {
+        .product-image {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.3s;
         }
         
-        .plant-card:hover .plant-image {
+        .product-card:hover .product-image {
             transform: scale(1.05);
         }
         
-        .plant-badge {
+        .product-badge {
             position: absolute;
             top: 10px;
             right: 10px;
@@ -159,29 +158,30 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             z-index: 1;
         }
         
-        .new-badge {
-            right: auto;
-            left: 10px;
-            background: var(--primary-light);
-        }
-        
-        .plant-info {
+        .product-info {
             padding: 15px;
         }
         
-        .plant-name {
+        .product-name {
             margin: 0 0 5px;
             font-size: 1.1rem;
             color: var(--secondary);
         }
         
-        .plant-price {
+        .product-category {
+            font-size: 0.8rem;
+            color: var(--gray);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .product-price {
             font-weight: bold;
             color: var(--primary);
             margin-bottom: 10px;
         }
         
-        .plant-desc {
+        .product-desc {
             color: var(--gray);
             font-size: 0.9rem;
             margin-bottom: 15px;
@@ -235,27 +235,6 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             padding: 5px;
         }
         
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 30px;
-        }
-        
-        .pagination a {
-            padding: 8px 12px;
-            border-radius: 4px;
-            background: var(--light);
-            color: var(--secondary);
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        
-        .pagination a:hover, .pagination a.active {
-            background: var(--primary);
-            color: white;
-        }
-        
         .error-message {
             text-align: center;
             color: #d32f2f;
@@ -267,46 +246,46 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
         
         /* Cart notification styles */
         .cart-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: 4px;
-    background: var(--primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 1000;
-    transform: translateX(150%);
-    transition: transform 0.3s ease;
-    max-width: 300px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 4px;
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-.cart-notification.show {
-    transform: translateX(0);
-}
+        .cart-notification.show {
+            transform: translateX(0);
+        }
 
-.cart-notification.error {
-    background: #f44336;
-}
+        .cart-notification.error {
+            background: #f44336;
+        }
 
-.cart-notification i {
-    font-size: 1.2em;
-}
+        .cart-notification i {
+            font-size: 1.2em;
+        }
     </style>
 </head>
 <body>
-    <?php include __DIR__ . './includes/navbar.php'; ?>
+    <?php include __DIR__ . '/includes/navbar.php'; ?>
     
     <!-- Cart notification element -->
     <div id="cart-notification" class="cart-notification"></div>
     
-    <div class="plants-container">
+    <div class="products-container">
         <div class="page-header">
             <h1><?= htmlspecialchars($page_title) ?></h1>
-            <p>Discover our collection of beautiful indoor plants</p>
+            <p>Enhance your gardening experience with our premium products</p>
         </div>
         
         <?php if ($error): ?>
@@ -315,74 +294,90 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             </div>
         <?php else: ?>
             <div class="category-filters">
-                <a href="<?= url('plants.php') ?>" class="category-btn <?= !$category ? 'active' : '' ?>">All Plants</a>
-                <a href="<?= url('plants.php?category=herbs') ?>" class="category-btn <?= $category === 'herbs' ? 'active' : '' ?>">Herbs</a>
-                <a href="<?= url('plants.php?category=vegetables') ?>" class="category-btn <?= $category === 'vegetables' ? 'active' : '' ?>">Vegetables</a>
-                <a href="<?= url('plants.php?category=flowers') ?>" class="category-btn <?= $category === 'flowers' ? 'active' : '' ?>">Flowers</a>
+                <a href="<?= url('products.php') ?>" class="category-btn <?= !$category ? 'active' : '' ?>">All Products</a>
+                <a href="<?= url('products.php?category=pot') ?>" class="category-btn <?= $category === 'pot' ? 'active' : '' ?>">Smart Pots</a>
+                <a href="<?= url('products.php?category=sensor') ?>" class="category-btn <?= $category === 'sensor' ? 'active' : '' ?>">Sensors</a>
+                <a href="<?= url('products.php?category=utility') ?>" class="category-btn <?= $category === 'utility' ? 'active' : '' ?>">Accessories</a>
             </div>
             
-            <div class="plants-grid">
-                <?php foreach ($plants as $plant): ?>
-                <div class="plant-card" data-plant-id="<?= $plant['id'] ?>">
-                    <div class="plant-image-container">
-                        <img src="<?= htmlspecialchars($plant['image_url']) ?>" 
-                             alt="<?= htmlspecialchars($plant['name']) ?>" 
-                             class="plant-image">
-                        
-                        <?php if ($plant['is_featured']): ?>
-                            <span class="plant-badge">Featured</span>
-                        <?php endif; ?>
-                        
-                        <?php if ($plant['is_new']): ?>
-                            <span class="plant-badge new-badge">New</span>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="plant-info">
-                        <h3 class="plant-name"><?= htmlspecialchars($plant['name']) ?></h3>
-                        <div class="plant-price">$<?= number_format($plant['price'], 2) ?></div>
-                        <p class="plant-desc"><?= htmlspecialchars($plant['short_description']) ?></p>
-                        
-                        <div class="quantity-controls">
-                            <button class="quantity-btn minus" data-plant-id="<?= $plant['id'] ?>">-</button>
-                            <input type="number" class="quantity-input" value="1" min="1" max="10" data-plant-id="<?= $plant['id'] ?>">
-                            <button class="quantity-btn plus" data-plant-id="<?= $plant['id'] ?>">+</button>
+            <!-- Featured Products Section (Smart Gardens & Sensors) -->
+            <div class="section-header">
+                <h2><i class="fas fa-star"></i> Smart Gardens & Sensor Kits</h2>
+            </div>
+            
+            <?php if (!empty($featured_products)): ?>
+                <div class="products-grid">
+                    <?php foreach ($featured_products as $product): ?>
+                    <div class="product-card" data-product-id="<?= $product['id'] ?>">
+                        <div class="product-image-container">
+                            <img src="<?= htmlspecialchars($product['image_url']) ?>" 
+                                 alt="<?= htmlspecialchars($product['name']) ?>" 
+                                 class="product-image">
+                            <span class="product-badge">
+                                <?= $product['category'] === 'pot' ? 'Smart Garden' : 'Sensor Kit' ?>
+                            </span>
                         </div>
                         
-                        <button class="add-to-cart" data-plant-id="<?= $plant['id'] ?>">
-                            <i class="fas fa-cart-plus"></i> Add to Cart
-                        </button>
+                        <div class="product-info">
+                            <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
+                            <div class="product-category"><?= ucfirst($product['category']) ?></div>
+                            <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
+                            <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
+                            
+                            <div class="quantity-controls">
+                                <button class="quantity-btn minus" data-product-id="<?= $product['id'] ?>">-</button>
+                                <input type="number" class="quantity-input" value="1" min="1" max="10" data-product-id="<?= $product['id'] ?>">
+                                <button class="quantity-btn plus" data-product-id="<?= $product['id'] ?>">+</button>
+                            </div>
+                            
+                            <button class="add-to-cart" data-product-id="<?= $product['id'] ?>">
+                                <i class="fas fa-cart-plus"></i> Add to Cart
+                            </button>
+                        </div>
                     </div>
+                    <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
+            <?php else: ?>
+                <p class="text-center">No featured products available at the moment.</p>
+            <?php endif; ?>
+            
+            <!-- Regular Products Section (Accessories) -->
+            <div class="section-header">
+                <h2><i class="fas fa-tools"></i> Plant Accessories</h2>
             </div>
             
-            <?php if ($total_plants > $per_page): ?>
-            <div class="pagination">
-                <?php if ($current_page > 1): ?>
-                    <a href="<?= url('plants.php?' . http_build_query(['category' => $category, 'page' => $current_page - 1])) ?>">
-                        <i class="fas fa-chevron-left"></i> Prev
-                    </a>
-                <?php endif; ?>
-                
-                <?php 
-                $total_pages = ceil($total_plants / $per_page);
-                $start_page = max(1, $current_page - 2);
-                $end_page = min($total_pages, $current_page + 2);
-                
-                for ($i = $start_page; $i <= $end_page; $i++): ?>
-                    <a href="<?= url('plants.php?' . http_build_query(['category' => $category, 'page' => $i])) ?>" 
-                       class="<?= $i === $current_page ? 'active' : '' ?>">
-                        <?= $i ?>
-                    </a>
-                <?php endfor; ?>
-                
-                <?php if ($current_page < $total_pages): ?>
-                    <a href="<?= url('plants.php?' . http_build_query(['category' => $category, 'page' => $current_page + 1])) ?>">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                <?php endif; ?>
-            </div>
+            <?php if (!empty($regular_products)): ?>
+                <div class="products-grid">
+                    <?php foreach ($regular_products as $product): ?>
+                    <div class="product-card" data-product-id="<?= $product['id'] ?>">
+                        <div class="product-image-container">
+                            <img src="<?= htmlspecialchars($product['image_url']) ?>" 
+                                 alt="<?= htmlspecialchars($product['name']) ?>" 
+                                 class="product-image">
+                            <span class="product-badge"><?= ucfirst($product['category']) ?></span>
+                        </div>
+                        
+                        <div class="product-info">
+                            <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
+                            <div class="product-category"><?= ucfirst($product['category']) ?></div>
+                            <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
+                            <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
+                            
+                            <div class="quantity-controls">
+                                <button class="quantity-btn minus" data-product-id="<?= $product['id'] ?>">-</button>
+                                <input type="number" class="quantity-input" value="1" min="1" max="10" data-product-id="<?= $product['id'] ?>">
+                                <button class="quantity-btn plus" data-product-id="<?= $product['id'] ?>">+</button>
+                            </div>
+                            
+                            <button class="add-to-cart" data-product-id="<?= $product['id'] ?>">
+                                <i class="fas fa-cart-plus"></i> Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p class="text-center">No products available in this category.</p>
             <?php endif; ?>
         <?php endif; ?>
     </div>
@@ -430,8 +425,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Quantity controls
     document.querySelectorAll('.quantity-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const plantId = this.dataset.plantId;
-            const input = document.querySelector(`.quantity-input[data-plant-id="${plantId}"]`);
+            const productId = this.dataset.productId;
+            const input = document.querySelector(`.quantity-input[data-product-id="${productId}"]`);
             let value = parseInt(input.value);
             
             if (this.classList.contains('minus') && value > 1) {
@@ -445,10 +440,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add to cart functionality
     document.querySelectorAll('.add-to-cart').forEach(button => {
         button.addEventListener('click', async function() {
-            const plantId = this.dataset.plantId;
-            const plantCard = this.closest('.plant-card');
-            const plantName = plantCard.querySelector('.plant-name').textContent;
-            const quantity = parseInt(plantCard.querySelector('.quantity-input').value);
+            const productId = this.dataset.productId;
+            const productCard = this.closest('.product-card');
+            const productName = productCard.querySelector('.product-name').textContent;
+            const quantity = parseInt(productCard.querySelector('.quantity-input').value);
             
             // Disable button during request
             this.disabled = true;
@@ -461,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `plant_id=${plantId}&quantity=${quantity}`
+                    body: `product_id=${productId}&quantity=${quantity}`
                 });
                 
                 const data = await response.json();
@@ -471,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Show success notification
-                showNotification(`${plantName} added to cart (${quantity})`);
+                showNotification(`${productName} added to cart (${quantity})`);
                 
                 // Update cart count
                 if (data.cart_count !== undefined) {
@@ -479,9 +474,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Visual feedback
-                plantCard.style.boxShadow = '0 0 0 2px #4CAF50';
+                productCard.style.boxShadow = '0 0 0 2px #4CAF50';
                 setTimeout(() => {
-                    plantCard.style.boxShadow = '';
+                    productCard.style.boxShadow = '';
                 }, 1000);
                 
             } catch (error) {

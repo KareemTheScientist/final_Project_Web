@@ -9,7 +9,8 @@ $recent_orders = [];
 $order_stats = [
     'total_orders' => 0,
     'completed_orders' => 0,
-    'pending_orders' => 0
+    'pending_orders' => 0,
+    'processing_orders' => 0
 ];
 $error_message = '';
 
@@ -32,21 +33,28 @@ try {
         exit();
     }
     
-    // Get recent orders (5 most recent) - Updated query to include order_number
+    // Get recent orders (5 most recent) - Fixed query to match your database structure
     $orders_stmt = $pdo->prepare("
-        SELECT o.id, o.order_number, o.order_date, o.status, o.total_amount, 
-               COUNT(oi.id) as item_count 
+        SELECT 
+            o.id, 
+            o.order_number, 
+            o.created_at as order_date, 
+            o.status, 
+            o.total_amount, 
+            COUNT(oi.id) as item_count,
+            GROUP_CONCAT(p.name SEPARATOR ', ') as items
         FROM orders o
         LEFT JOIN order_items oi ON o.id = oi.order_id
-        WHERE o.user_id = ? 
+        LEFT JOIN plants p ON oi.plant_id = p.id
+        WHERE o.user_id = ?
         GROUP BY o.id
-        ORDER BY o.order_date DESC 
+        ORDER BY o.created_at DESC 
         LIMIT 5
     ");
     $orders_stmt->execute([$_SESSION['user_id']]);
     $recent_orders = $orders_stmt->fetchAll();
     
-    // Get order statistics - Added more status types
+    // Get order statistics - Updated to match your status values
     $stats_stmt = $pdo->prepare("
         SELECT 
             COUNT(*) as total_orders,
@@ -57,7 +65,17 @@ try {
         WHERE user_id = ?
     ");
     $stats_stmt->execute([$_SESSION['user_id']]);
-    $order_stats = $stats_stmt->fetch() ?: $order_stats;
+    $order_stats = $stats_stmt->fetch();
+    
+    // If no orders found, use defaults
+    if (!$order_stats) {
+        $order_stats = [
+            'total_orders' => 0,
+            'completed_orders' => 0,
+            'pending_orders' => 0,
+            'processing_orders' => 0
+        ];
+    }
     
 } catch (PDOException $e) {
     error_log("Dashboard Error: " . $e->getMessage());
@@ -127,7 +145,7 @@ include __DIR__ . '/includes/navbar.php';
             </div>
             <div>
                 <h3>Processing</h3>
-                <p class="stat-value"><?= $order_stats['processing_orders'] ?? 0 ?></p>
+                <p class="stat-value"><?= $order_stats['processing_orders'] ?></p>
             </div>
         </div>
     </div>
@@ -135,7 +153,9 @@ include __DIR__ . '/includes/navbar.php';
     <div class="dashboard-section">
         <div class="section-header">
             <h2><i class="fas fa-history"></i> Recent Orders</h2>
-            <a href="<?= url('/orders.php') ?>" class="btn-link">View All Orders</a>
+            <?php if (!empty($recent_orders)): ?>
+                <a href="<?= url('/orders.php') ?>" class="btn-link">View All Orders</a>
+            <?php endif; ?>
         </div>
         
         <?php if (!empty($recent_orders)): ?>
@@ -155,9 +175,9 @@ include __DIR__ . '/includes/navbar.php';
                         <tbody>
                             <?php foreach ($recent_orders as $order): ?>
                             <tr>
-                                <td><?= htmlspecialchars($order['order_number']) ?></td>
+                                <td><?= $order['order_number'] ? htmlspecialchars($order['order_number']) : 'ORD-' . $order['id'] ?></td>
                                 <td><?= date('M d, Y', strtotime($order['order_date'])) ?></td>
-                                <td><?= $order['item_count'] ?></td>
+                                <td><?= htmlspecialchars($order['items']) ?></td>
                                 <td>$<?= number_format($order['total_amount'], 2) ?></td>
                                 <td>
                                     <span class="status-badge status-<?= $order['status'] ?>">
