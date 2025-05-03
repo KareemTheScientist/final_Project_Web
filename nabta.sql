@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 03, 2025 at 11:58 PM
+-- Generation Time: May 04, 2025 at 01:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -137,7 +137,8 @@ INSERT INTO `orders` (`id`, `user_id`, `order_number`, `total_amount`, `shipping
 (4, 2, '', 37.30, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-02 12:03:45'),
 (5, 2, '', 25.16, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:20:12'),
 (6, 2, '', 24.62, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:20:59'),
-(7, 1, '', 45.68, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:26:54');
+(7, 1, '', 45.68, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:26:54'),
+(8, 2, '', 21.92, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'paypal', 'completed', '2025-05-03 22:18:46');
 
 -- --------------------------------------------------------
 
@@ -172,7 +173,8 @@ INSERT INTO `order_items` (`id`, `order_id`, `plant_id`, `quantity`, `price`) VA
 (12, 6, 18, 1, 7.50),
 (13, 6, 19, 1, 9.75),
 (14, 7, 18, 1, 7.50),
-(15, 7, 19, 3, 9.75);
+(15, 7, 19, 3, 9.75),
+(16, 8, 27, 1, 14.75);
 
 -- --------------------------------------------------------
 
@@ -394,13 +396,13 @@ ALTER TABLE `cart_items`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `plants`
