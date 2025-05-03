@@ -33,7 +33,7 @@ if (!is_logged_in() && isset($_COOKIE['remember_me'])) {
                 ];
 
                 session_regenerate_id(true);
-                redirect('index.php'); // or 'dashboard.php'
+                redirect('dashboard.php'); // or 'dashboard.php'
             }
         }
         // Clear invalid cookie
