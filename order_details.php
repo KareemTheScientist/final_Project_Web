@@ -179,6 +179,7 @@ include __DIR__ . '/includes/navbar.php';
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
+    padding-top: 5%;
 }
 
 .order-status {

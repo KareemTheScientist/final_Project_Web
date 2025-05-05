@@ -222,6 +222,7 @@ include __DIR__ . '/includes/navbar.php';
     margin-bottom: 2rem;
     flex-wrap: wrap;
     gap: 1rem;
+    padding-top: 5%;
 }
 
 .stats-grid {
@@ -331,6 +332,7 @@ th {
     .dashboard-header {
         flex-direction: column;
         align-items: flex-start;
+        
     }
     
     .stats-grid {

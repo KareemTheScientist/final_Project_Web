@@ -7,14 +7,14 @@ session_start([
     'cookie_samesite' => 'Strict'
 ]);
 
-require_once '../config/init.php';
-require_once '../db.php';
+require_once './config/init.php';
+
 
 // Redirect if already logged in
-if (isLoggedIn()) {
-    header('Location: index.php');
-    exit();
-}
+// if (isLoggedIn()) {
+//     header('Location: index.php');
+//     exit();
+// }
 
 $errors = [];
 $success = '';
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         .logo img {
-            height: 80px;
+            height: 100px;
             transition: transform 0.3s;
         }
         
@@ -302,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <div class="auth-container">
         <div class="logo">
             <a href="../index.php">
-                <img src="../assets/images/logo.png" alt="Nabta">
+                <img src="../final_Project_Web/img/NABTA.png" alt="Nabta">
             </a>
         </div>
         
