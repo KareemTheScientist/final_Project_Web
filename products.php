@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/config/init.php';
+require_once __DIR__ . './config/init.php';
 
 // Get current category filter
 $category = isset($_GET['category']) ? strtolower($_GET['category']) : null;
@@ -17,13 +17,13 @@ $error = '';
 
 try {
     // Base query
-    $query = "SELECT * FROM products";
-    $count_query = "SELECT COUNT(*) FROM products";
+    $query = "SELECT * FROM products WHERE stock > 0";
+    $count_query = "SELECT COUNT(*) FROM products WHERE stock > 0";
     
     // Add category filter if valid
     if ($category && in_array($category, $valid_categories)) {
-        $query .= " WHERE category = :category";
-        $count_query .= " WHERE category = :category";
+        $query .= " AND category = :category";
+        $count_query .= " AND category = :category";
     }
     
     // Add sorting
@@ -65,6 +65,7 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
     <title><?= htmlspecialchars($page_title) ?> | Nabta</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Same styles as plants.php */
         :root {
             --primary: #2e7d32;
             --primary-light: #4CAF50;
@@ -147,7 +148,7 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             transform: scale(1.05);
         }
         
-        .product-category {
+        .product-badge {
             position: absolute;
             top: 10px;
             right: 10px;
@@ -259,6 +260,20 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             margin: 20px 0;
         }
         
+        .stock-info {
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+        
+        .low-stock {
+            color: #ff9800;
+        }
+        
+        .out-of-stock {
+            color: #f44336;
+        }
+        
         /* Cart notification styles */
         .cart-notification {
             position: fixed;
@@ -289,28 +304,10 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
         .cart-notification i {
             font-size: 1.2em;
         }
-        
-        .stock-info {
-            font-size: 0.8rem;
-            color: var(--gray);
-            margin-bottom: 10px;
-        }
-        
-        .in-stock {
-            color: var(--primary);
-        }
-        
-        .low-stock {
-            color: orange;
-        }
-        
-        .out-of-stock {
-            color: #f44336;
-        }
     </style>
 </head>
 <body>
-    <?php include __DIR__ . '/includes/navbar.php'; ?>
+    <?php include __DIR__ . './includes/navbar.php'; ?>
     
     <!-- Cart notification element -->
     <div id="cart-notification" class="cart-notification"></div>
@@ -328,7 +325,7 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
         <?php else: ?>
             <div class="category-filters">
                 <a href="<?= url('products.php') ?>" class="category-btn <?= !$category ? 'active' : '' ?>">All Products</a>
-                <a href="<?= url('products.php?category=pot') ?>" class="category-btn <?= $category === 'pot' ? 'active' : '' ?>">Smart Pots</a>
+                <a href="<?= url('products.php?category=pot') ?>" class="category-btn <?= $category === 'pot' ? 'active' : '' ?>">Pots</a>
                 <a href="<?= url('products.php?category=sensor') ?>" class="category-btn <?= $category === 'sensor' ? 'active' : '' ?>">Sensors</a>
                 <a href="<?= url('products.php?category=utility') ?>" class="category-btn <?= $category === 'utility' ? 'active' : '' ?>">Utilities</a>
             </div>
@@ -340,36 +337,26 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
                         <img src="<?= htmlspecialchars($product['image_url']) ?>" 
                              alt="<?= htmlspecialchars($product['name']) ?>" 
                              class="product-image">
-                        
-                        <span class="product-category"><?= ucfirst($product['category']) ?></span>
                     </div>
                     
                     <div class="product-info">
                         <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
                         <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
-                        
-                        <?php if ($product['stock'] > 0): ?>
-                            <div class="stock-info <?= $product['stock'] > 10 ? 'in-stock' : 'low-stock' ?>">
-                                <?= $product['stock'] > 10 ? 'In Stock' : 'Only ' . $product['stock'] . ' left' ?>
-                            </div>
-                        <?php else: ?>
-                            <div class="stock-info out-of-stock">Out of Stock</div>
-                        <?php endif; ?>
-                        
+                        <div class="stock-info <?= $product['stock'] < 5 ? 'low-stock' : '' ?>">
+                            <?= $product['stock'] > 0 ? "In stock: {$product['stock']}" : "Out of stock" ?>
+                        </div>
                         <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
                         
                         <div class="quantity-controls">
                             <button class="quantity-btn minus" data-product-id="<?= $product['id'] ?>">-</button>
-                            <input type="number" class="quantity-input" value="1" min="1" max="10" 
-                                   data-product-id="<?= $product['id'] ?>"
-                                   <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
+                            <input type="number" class="quantity-input" value="1" min="1" max="<?= min(10, $product['stock']) ?>" 
+                                   data-product-id="<?= $product['id'] ?>" <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
                             <button class="quantity-btn plus" data-product-id="<?= $product['id'] ?>">+</button>
                         </div>
                         
-                        <button class="add-to-cart" data-product-id="<?= $product['id'] ?>"
-                                <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
+                        <button class="add-to-cart" data-product-id="<?= $product['id'] ?>" <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
                             <i class="fas fa-cart-plus"></i> 
-                            <?= $product['stock'] <= 0 ? 'Out of Stock' : 'Add to Cart' ?>
+                            <?= $product['stock'] > 0 ? 'Add to Cart' : 'Out of Stock' ?>
                         </button>
                     </div>
                 </div>
@@ -452,70 +439,69 @@ document.addEventListener('DOMContentLoaded', function() {
             const productId = this.dataset.productId;
             const input = document.querySelector(`.quantity-input[data-product-id="${productId}"]`);
             let value = parseInt(input.value);
+            const max = parseInt(input.max);
             
             if (this.classList.contains('minus') && value > 1) {
                 input.value = value - 1;
-            } else if (this.classList.contains('plus') && value < 10) {
+            } else if (this.classList.contains('plus') && value < max) {
                 input.value = value + 1;
             }
         });
     });
     
     // Add to cart functionality
-document.querySelectorAll('.add-to-cart').forEach(button => {
-    button.addEventListener('click', async function() {
-        const productId = this.dataset.productId;
-        const productCard = this.closest('.product-card');
-        const productName = productCard.querySelector('.product-name').textContent;
-        const quantity = parseInt(productCard.querySelector('.quantity-input').value);
-        
-        // Create form data object
-        const formData = new FormData();
-        formData.append('product_id', productId);
-        formData.append('quantity', quantity);
-        formData.append('item_type', 'product'); // Explicitly set item_type
-        
-        // Disable button during request
-        this.disabled = true;
-        const originalText = this.innerHTML;
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-        
-        try {
-            const response = await fetch('<?= url("actions/add_to_cart.php") ?>', {
-                method: 'POST',
-                body: formData // Send as FormData
-            });
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', async function() {
+            const productId = this.dataset.productId;
+            const productCard = this.closest('.product-card');
+            const productName = productCard.querySelector('.product-name').textContent;
+            const quantity = parseInt(productCard.querySelector('.quantity-input').value);
             
-            const data = await response.json();
+            // Disable button during request
+            this.disabled = true;
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
             
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to add to cart');
+            try {
+                const response = await fetch('<?= url("actions/add_to_cart.php") ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `product_id=${productId}&quantity=${quantity}`
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to add to cart');
+                }
+                
+                // Show success notification
+                showNotification(`${productName} added to cart (${quantity})`);
+                
+                // Update cart count
+                if (data.cart_count !== undefined) {
+                    updateCartCount(data.cart_count);
+                }
+                
+                // Visual feedback
+                productCard.style.boxShadow = '0 0 0 2px #4CAF50';
+                setTimeout(() => {
+                    productCard.style.boxShadow = '';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification(error.message || 'Failed to add to cart', true);
+            } finally {
+                // Re-enable button
+                this.disabled = false;
+                this.innerHTML = originalText;
             }
-            
-            // Show success notification
-            showNotification(`${productName} added to cart (${quantity})`);
-            
-            // Update cart count
-            if (data.cart_count !== undefined) {
-                updateCartCount(data.cart_count);
-            }
-            
-            // Visual feedback
-            productCard.style.boxShadow = '0 0 0 2px #4CAF50';
-            setTimeout(() => {
-                productCard.style.boxShadow = '';
-            }, 1000);
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showNotification(error.message || 'Failed to add to cart', true);
-        } finally {
-            // Re-enable button
-            this.disabled = false;
-            this.innerHTML = originalText;
-        }
+        });
     });
-});
+    
     // Initialize cart count on page load
     async function initializeCartCount() {
         try {

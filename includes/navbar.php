@@ -5,36 +5,55 @@ if (!defined('BASE_URL')) {
     die('Direct access not allowed');
 }
 
+// Get cart count from database if logged in, otherwise from session
+if (is_logged_in()) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT SUM(ci.quantity) as total_items 
+            FROM carts c
+            JOIN cart_items ci ON c.id = ci.cart_id
+            WHERE c.user_id = :user_id
+        ");
+        $stmt->execute(['user_id' => $_SESSION['user_id']]);
+        $cart_count = $stmt->fetchColumn() ?? 0;
+    } catch (PDOException $e) {
+        error_log("Navbar cart count error: " . $e->getMessage());
+        $cart_count = 0;
+    }
+} else {
+    $cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
+}
+
 $current_page = basename($_SERVER['PHP_SELF']);
-$cart_count = isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0;
 $is_index_page = $current_page === 'index.php';
 ?>
 
 <nav class="navbar">
     <div class="nav-container <?= $is_index_page ? 'index-layout' : '' ?>">
-        <!-- Brand Logo (Far left on index, centered on other pages) -->
+        <!-- Brand Logo -->
         <div class="nav-brand">
             <a href="<?= url('/index.php') ?>">
-                <img src="<?= url('/img/NABTA.png') ?>" alt="Nabta Logo">
-                <span>Nabta</span>
+                <img src="<?= url('/img/NABTA.png') ?>" alt="Nabta Logo" class="logo-img">
+                <span class="logo-text">Nabta</span>
             </a>
         </div>
 
-        <!-- Navigation Links -->
+        <!-- Mobile Menu Button -->
         <button class="mobile-menu-btn" aria-label="Toggle navigation">
             <i class="fas fa-bars"></i>
         </button>
 
+        <!-- Navigation Links -->
         <ul class="nav-links">
             <li>
                 <a href="<?= url('/index.php') ?>" class="<?= $current_page === 'index.php' ? 'active' : '' ?>">
-                    <i class="fas fa-home"></i> Home
+                    <i class="fas fa-home"></i> <span class="link-text">Home</span>
                 </a>
             </li>
 
             <li class="dropdown">
                 <a href="<?= url('/plants.php') ?>" class="<?= $current_page === 'plants.php' ? 'active' : '' ?>">
-                    <i class="fas fa-leaf"></i> Plants <i class="fas fa-chevron-down"></i>
+                    <i class="fas fa-leaf"></i> <span class="link-text">Plants</span> <i class="fas fa-chevron-down dropdown-icon"></i>
                 </a>
                 <div class="dropdown-content">
                     <a href="<?= url('/plants.php?category=herbs') ?>"><i class="fas fa-leaf"></i> Herbs</a>
@@ -45,29 +64,36 @@ $is_index_page = $current_page === 'index.php';
                 </div>
             </li>
 
-            <li>
+            <li class="dropdown">
                 <a href="<?= url('/products.php') ?>" class="<?= $current_page === 'products.php' ? 'active' : '' ?>">
-                    <i class="fas fa-box-open"></i> Products
+                    <i class="fas fa-box-open"></i> <span class="link-text">Products</span> <i class="fas fa-chevron-down dropdown-icon"></i>
+                </a>
+                <div class="dropdown-content">
+                    <a href="<?= url('/products.php?category=pot') ?>"><i class="fas fa-seedling"></i> Smart Pots</a>
+                    <a href="<?= url('/products.php?category=sensor') ?>"><i class="fas fa-tachometer-alt"></i> Sensors</a>
+                    <a href="<?= url('/products.php?category=utility') ?>"><i class="fas fa-tools"></i> Utilities</a>
+                    <div class="dropdown-divider"></div>
+                    <a href="<?= url('/products.php') ?>"><i class="fas fa-boxes"></i> All Products</a>
+                </div>
+            </li>
+
+            <li>
+                <a href="<?= url('/blog.php') ?>" class="<?= $current_page === 'blog.php' ? 'active' : '' ?>">
+                    <i class="fas fa-newspaper"></i> <span class="link-text">Blog</span>
                 </a>
             </li>
 
             <li>
-                <a href="<?= url('/about.php') ?>" class="<?= $current_page === 'about.php' ? 'active' : '' ?>">
-                    <i class="fas fa-info-circle"></i> About Us
+                <a href="<?= url('/services.php') ?>" class="<?= $current_page === 'services.php' ? 'active' : '' ?>">
+                    <i class="fas fa-concierge-bell"></i> <span class="link-text">Services</span>
                 </a>
             </li>
 
-            <li>
-                <a href="<?= url('/contact.php') ?>" class="<?= $current_page === 'contact.php' ? 'active' : '' ?>">
-                    <i class="fas fa-envelope"></i> Contact
-                </a>
-            </li>
-
-            <li>
+            <li class="cart-link">
                 <a href="<?= url('/cart.php') ?>" class="<?= $current_page === 'cart.php' ? 'active' : '' ?>">
-                    <i class="fas fa-shopping-cart"></i> Cart
+                    <i class="fas fa-shopping-cart"></i> <span class="link-text">Cart</span>
                     <?php if ($cart_count > 0): ?>
-                        <span class="cart-count animate-bounce"><?= $cart_count ?></span>
+                        <span class="cart-count"><?= $cart_count ?></span>
                     <?php endif; ?>
                 </a>
             </li>
@@ -86,22 +112,25 @@ $is_index_page = $current_page === 'index.php';
                     </button>
                     <div class="dropdown-content user-dropdown-menu">
                         <a href="<?= url('/dashboard.php') ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                        <a href="<?= url('/orders.php') ?>"><i class="fas fa-receipt"></i> My Orders</a>
                         <a href="<?= url('/account.php') ?>"><i class="fas fa-user-cog"></i> Account Settings</a>
-                        <a href="<?= url('/subscriptions.php') ?>"><i class="fas fa-calendar-check"></i> Subscriptions</a>
+                        <?//php// if (has_subscription()): ?>
+                            <a href="<?= url('/subscriptions.php') ?>"><i class="fas fa-calendar-check"></i> Subscriptions</a>
+                        <?php endif; ?>
                         <div class="dropdown-divider"></div>
                         <a href="<?= url('/logout.php') ?>"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>
-            <?php else: ?>
-                <div class="auth-buttons">
+            <?//p else: ?>
+                <!-- <div class="auth-buttons">
                     <a href="<?= url('/login.php') ?>" class="btn-login">
-                        <i class="fas fa-sign-in-alt"></i> Login
+                        <i class="fas fa-sign-in-alt"></i> <span class="btn-text">Login</span>
                     </a>
                     <a href="<?= url('/register.php') ?>" class="btn-signup">
-                        <i class="fas fa-user-plus"></i> Register
+                        <i class="fas fa-user-plus"></i> <span class="btn-text">Register</span>
                     </a>
-                </div>
-            <?php endif; ?>
+                </div> -->
+            <?php //endif; ?>
         </div>
     </div>
 </nav>
@@ -164,21 +193,23 @@ $is_index_page = $current_page === 'index.php';
                     link.appendChild(countBadge);
                 }
                 countBadge.textContent = newCount;
-                countBadge.classList.add('animate-bounce');
-                setTimeout(() => countBadge.classList.remove('animate-bounce'), 1000);
+                animateCartCount();
             } else if (countBadge) {
                 link.removeChild(countBadge);
             }
         });
     });
 
-    // Function to trigger cart update (can be called from any page)
-    function updateGlobalCartCount(count) {
+    // Initialize cart count on page load
+    <?php if (is_logged_in()): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Trigger initial cart count update
         const event = new CustomEvent('cartUpdated', {
-            detail: { count: count }
+            detail: { count: <?= $cart_count ?> }
         });
         document.dispatchEvent(event);
-    }
+    });
+    <?php endif; ?>
 </script>
 
 <style>
@@ -242,15 +273,12 @@ $is_index_page = $current_page === 'index.php';
     }
 
     .nav-brand a {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: var(--primary);
-        text-decoration: none;
         display: flex;
         align-items: center;
+        text-decoration: none;
     }
 
-    .nav-brand img {
+    .logo-img {
         height: auto;
         max-height: 50px;
         width: auto;
@@ -259,15 +287,21 @@ $is_index_page = $current_page === 'index.php';
         margin-right: 10px;
     }
 
+    .logo-text {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
     /* Navigation Links Styling */
     .nav-links {
         display: flex;
         list-style: none;
         margin-left: auto;
+        gap: 15px;
     }
 
     .nav-links li {
-        margin-left: 20px;
         position: relative;
     }
 
@@ -281,6 +315,7 @@ $is_index_page = $current_page === 'index.php';
         gap: 8px;
         padding: 8px 12px;
         border-radius: 4px;
+        position: relative;
     }
 
     .nav-links a:hover {
@@ -294,6 +329,20 @@ $is_index_page = $current_page === 'index.php';
         background-color: rgba(46, 125, 50, 0.1);
     }
 
+    .link-text {
+        display: inline-block;
+    }
+
+    .dropdown-icon {
+        font-size: 0.8rem;
+        margin-left: 5px;
+        transition: transform 0.3s;
+    }
+
+    .dropdown:hover .dropdown-icon {
+        transform: rotate(180deg);
+    }
+
     /* Dropdown Styling */
     .dropdown-content {
         position: absolute;
@@ -305,6 +354,12 @@ $is_index_page = $current_page === 'index.php';
         border-radius: 4px;
         z-index: 1;
         display: none;
+        animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .dropdown:hover .dropdown-content {
@@ -316,6 +371,7 @@ $is_index_page = $current_page === 'index.php';
         display: flex;
         align-items: center;
         gap: 10px;
+        color: var(--dark);
     }
 
     .dropdown-content a:hover {
@@ -374,7 +430,6 @@ $is_index_page = $current_page === 'index.php';
         justify-content: center;
         font-weight: bold;
         font-size: 1rem;
-        
     }
 
     .user-dropdown-menu {
@@ -396,6 +451,10 @@ $is_index_page = $current_page === 'index.php';
     }
 
     /* Cart Styling */
+    .cart-link {
+        position: relative;
+    }
+
     .cart-count {
         position: absolute;
         top: -8px;
@@ -457,6 +516,10 @@ $is_index_page = $current_page === 'index.php';
     .btn-signup:hover {
         background: var(--primary-dark);
         border-color: var(--primary-dark);
+    }
+
+    .btn-text {
+        display: inline-block;
     }
 
     /* Mobile Menu Button */
@@ -546,6 +609,10 @@ $is_index_page = $current_page === 'index.php';
         .user-name {
             display: inline;
         }
+
+        .link-text, .btn-text {
+            display: inline;
+        }
     }
 
     @media (max-width: 576px) {
@@ -553,7 +620,7 @@ $is_index_page = $current_page === 'index.php';
             max-height: 40px;
         }
 
-        .nav-brand span {
+        .logo-text {
             font-size: 1.5rem;
         }
 

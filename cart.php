@@ -10,35 +10,57 @@ $cart_items = [];
 $total = 0;
 $error = '';
 
-// Check if cart exists and has items
-if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
-    $plant_ids = array_keys($_SESSION['cart']);
+try {
+    // Get user's cart
+    $stmt = $pdo->prepare("SELECT id FROM carts WHERE user_id = :user_id");
+    $stmt->execute(['user_id' => $_SESSION['user_id']]);
+    $cart = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    try {
-        // Create placeholders for the IN clause
-        $placeholders = implode(',', array_fill(0, count($plant_ids), '?'));
+    if ($cart) {
+        // Get cart items with plant and product details
+        $stmt = $pdo->prepare("
+            SELECT 
+                ci.id,
+                ci.quantity,
+                ci.item_type,
+                p.id AS plant_id,
+                p.name AS plant_name,
+                p.price AS plant_price,
+                p.image_url AS plant_image,
+                pr.id AS product_id,
+                pr.name AS product_name,
+                pr.price AS product_price,
+                pr.image_url AS product_image,
+                pr.category AS product_category
+            FROM cart_items ci
+            LEFT JOIN plants p ON ci.plant_id = p.id AND ci.item_type = 'plant'
+            LEFT JOIN products pr ON ci.product_id = pr.id AND ci.item_type = 'product'
+            WHERE ci.cart_id = :cart_id
+        ");
+        $stmt->execute(['cart_id' => $cart['id']]);
+        $cart_items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Get plant details for items in cart
-        $stmt = $pdo->prepare("SELECT * FROM plants WHERE id IN ($placeholders)");
-        $stmt->execute($plant_ids);
-        $plants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Prepare cart items with quantities and subtotals
-        foreach ($plants as $plant) {
-            $quantity = $_SESSION['cart'][$plant['id']];
-            $subtotal = $plant['price'] * $quantity;
-            $total += $subtotal;
+        // Calculate totals and prepare display data
+        foreach ($cart_items as &$item) {
+            if ($item['item_type'] === 'plant') {
+                $item['name'] = $item['plant_name'];
+                $item['price'] = $item['plant_price'];
+                $item['image_url'] = $item['plant_image'];
+                $item['type_label'] = 'Plant';
+            } else {
+                $item['name'] = $item['product_name'];
+                $item['price'] = $item['product_price'];
+                $item['image_url'] = $item['product_image'];
+                $item['type_label'] = ucfirst($item['product_category']);
+            }
             
-            $cart_items[] = [
-                'plant' => $plant,
-                'quantity' => $quantity,
-                'subtotal' => $subtotal
-            ];
+            $item['subtotal'] = $item['price'] * $item['quantity'];
+            $total += $item['subtotal'];
         }
-    } catch (PDOException $e) {
-        error_log("Cart error: " . $e->getMessage());
-        $error = "Could not load cart items. Please try again.";
     }
+} catch (PDOException $e) {
+    error_log("Cart error: " . $e->getMessage());
+    $error = "Could not load cart items. Please try again.";
 }
 ?>
 
@@ -53,22 +75,30 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         <div class="empty-cart">
             <i class="fas fa-shopping-cart fa-3x"></i>
             <p>Your cart is empty</p>
-            <a href="<?= url('/plants.php') ?>" class="btn btn-primary">
-                <i class="fas fa-leaf"></i> Browse Plants
-            </a>
+            <div class="empty-cart-buttons">
+                <a href="<?= url('/plants.php') ?>" class="btn btn-primary">
+                    <i class="fas fa-leaf"></i> Browse Plants
+                </a>
+                <a href="<?= url('/products.php') ?>" class="btn btn-secondary">
+                    <i class="fas fa-seedling"></i> Browse Products
+                </a>
+            </div>
         </div>
     <?php else: ?>
         <div class="cart-items">
             <?php foreach ($cart_items as $item): ?>
-            <div class="cart-item" data-plant-id="<?= $item['plant']['id'] ?>">
+            <div class="cart-item" data-item-id="<?= $item['id'] ?>" data-item-type="<?= $item['item_type'] ?>">
                 <div class="item-image">
-                    <img src="<?= htmlspecialchars($item['plant']['image_url']) ?>" 
-                         alt="<?= htmlspecialchars($item['plant']['name']) ?>">
+                    <img src="<?= htmlspecialchars($item['image_url']) ?>" 
+                         alt="<?= htmlspecialchars($item['name']) ?>">
                 </div>
                 
                 <div class="item-details">
-                    <h3><?= htmlspecialchars($item['plant']['name']) ?></h3>
-                    <p class="price">$<?= number_format($item['plant']['price'], 2) ?></p>
+                    <div class="item-header">
+                        <h3><?= htmlspecialchars($item['name']) ?></h3>
+                        <span class="item-type-badge"><?= $item['type_label'] ?></span>
+                    </div>
+                    <p class="price">$<?= number_format($item['price'], 2) ?></p>
                     
                     <div class="quantity-controls">
                         <button class="quantity-btn minus" title="Decrease quantity">
@@ -94,16 +124,14 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         </div>
         
         <div class="cart-summary">
-    <div class="total">
-        <span>Total:</span>
-        <span>$<?= number_format($total, 2) ?></span>
-    </div>
-    <a href="./checkout.php" class="checkout-btn">
-    <i class="fas fa-credit-card"></i> Proceed to Checkout
-</a>
-
-</div>
-
+            <div class="total">
+                <span>Total:</span>
+                <span>$<?= number_format($total, 2) ?></span>
+            </div>
+            <a href="<?= url('/checkout.php') ?>" class="checkout-btn">
+                <i class="fas fa-credit-card"></i> Proceed to Checkout
+            </a>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -132,6 +160,12 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         margin-bottom: 1.5rem;
     }
     
+    .empty-cart-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+    }
+    
     .cart-items {
         display: grid;
         gap: 1.5rem;
@@ -147,6 +181,20 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .item-type-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        background: #e0e0e0;
+        border-radius: 4px;
+        color: #424242;
     }
     
     .item-image {
@@ -276,6 +324,10 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
             grid-area: remove;
             justify-self: end;
         }
+        
+        .empty-cart-buttons {
+            flex-direction: column;
+        }
     }
 </style>
 
@@ -285,7 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.quantity-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
             const cartItem = this.closest('.cart-item');
-            const plantId = cartItem.dataset.plantId;
+            const itemId = cartItem.dataset.itemId;
+            const itemType = cartItem.dataset.itemType;
             const input = cartItem.querySelector('.quantity-input');
             let quantity = parseInt(input.value);
             
@@ -296,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             input.value = quantity;
-            await updateCartItem(plantId, quantity);
+            await updateCartItem(itemId, itemType, quantity);
         });
     });
     
@@ -304,10 +357,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.remove-item').forEach(btn => {
         btn.addEventListener('click', async function() {
             const cartItem = this.closest('.cart-item');
-            const plantId = cartItem.dataset.plantId;
+            const itemId = cartItem.dataset.itemId;
+            const itemType = cartItem.dataset.itemType;
             
             if (confirm('Are you sure you want to remove this item from your cart?')) {
-                await updateCartItem(plantId, 0);
+                await updateCartItem(itemId, itemType, 0);
                 cartItem.remove();
                 
                 // Reload if cart is now empty
@@ -324,13 +378,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const quantity = Math.min(10, Math.max(1, parseInt(this.value) || 1));
             this.value = quantity;
             
-            const plantId = this.closest('.cart-item').dataset.plantId;
-            await updateCartItem(plantId, quantity);
+            const cartItem = this.closest('.cart-item');
+            await updateCartItem(cartItem.dataset.itemId, cartItem.dataset.itemType, quantity);
         });
     });
     
     // Update cart item function
-    async function updateCartItem(plantId, quantity) {
+    async function updateCartItem(itemId, itemType, quantity) {
         const loadingIndicator = document.createElement('div');
         loadingIndicator.className = 'loading-overlay';
         loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x"></i>';
@@ -342,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `plant_id=${plantId}&quantity=${quantity}`
+                body: `item_id=${itemId}&item_type=${itemType}&quantity=${quantity}`
             });
             
             const data = await response.json();
