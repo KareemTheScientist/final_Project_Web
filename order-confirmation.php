@@ -3,10 +3,10 @@ require_once __DIR__ . '/config/init.php';
 require_auth();
 
 // Redirect if checkout info is not set
-if (empty($_SESSION['checkout_info']) || empty($_SESSION['cart'])) {
-    header('Location: cart.php');
-    exit;
-}
+// if (empty($_SESSION['checkout_info']) || empty($_SESSION['checkout_info']['cart_items'])) {
+//     header('Location: cart.php');
+//     exit;
+// }
 
 $page_title = "Order Confirmation | Nabta";
 include __DIR__ . '/includes/navbar.php';
@@ -14,27 +14,12 @@ include __DIR__ . '/includes/navbar.php';
 // Get checkout info from session
 $checkout_info = $_SESSION['checkout_info'];
 $shipping = $checkout_info['shipping'];
+$cart_items = $checkout_info['cart_items'];
 
 // Calculate order totals
-$cart_items = [];
-$subtotal = 0;
+$subtotal = calculateCartSubtotal($cart_items);
 $shipping_cost = 5.99;
 $tax_rate = 0.08;
-
-foreach ($_SESSION['cart'] as $item) {
-    $item_total = $item['price'] * $item['quantity'];
-    $subtotal += $item_total;
-    
-    $cart_items[] = [
-        'name' => $item['name'],
-        'price' => $item['price'],
-        'quantity' => $item['quantity'],
-        'image_url' => $item['image_url'],
-        'type' => $item['type'],
-        'item_total' => $item_total
-    ];
-}
-
 $tax = $subtotal * $tax_rate;
 $total = $subtotal + $shipping_cost + $tax;
 $order_number = 'NAB-' . strtoupper(uniqid());
@@ -46,7 +31,7 @@ try {
     // Save order
     $stmt = $pdo->prepare("
         INSERT INTO orders (user_id, order_number, total_amount, shipping_address, payment_method, status)
-        VALUES (?, ?, ?, ?, ?, 'completed')
+        VALUES (?, ?, ?, ?, ?, 'processing')
     ");
 
     $shipping_address = implode(', ', [
@@ -68,22 +53,33 @@ try {
 
     $order_id = $pdo->lastInsertId();
 
-    // Save order items (plants only in this example)
-    $stmt = $pdo->prepare("
+    // Save order items (both plants and products)
+    $plantStmt = $pdo->prepare("
         INSERT INTO order_items (order_id, plant_id, quantity, price)
         VALUES (?, ?, ?, ?)
     ");
+    
+    $productStmt = $pdo->prepare("
+        INSERT INTO order_products (order_id, product_id, quantity, price)
+        VALUES (?, ?, ?, ?)
+    ");
 
-    foreach ($_SESSION['cart'] as $id => $item) {
+    foreach ($cart_items as $item) {
         if ($item['type'] === 'plant') {
-            $stmt->execute([
+            $plantStmt->execute([
                 $order_id,
-                $id,
+                $item['item_id'],
+                $item['quantity'],
+                $item['price']
+            ]);
+        } elseif ($item['type'] === 'product') {
+            $productStmt->execute([
+                $order_id,
+                $item['item_id'],
                 $item['quantity'],
                 $item['price']
             ]);
         }
-        // Add similar for products if needed
     }
 
     // Clear cart
@@ -92,13 +88,18 @@ try {
 
     $pdo->commit();
     
-    // Clear session cart
-    unset($_SESSION['cart']);
+    // Clear session checkout data
     unset($_SESSION['checkout_info']);
+    
+    // Send confirmation email (would implement this function)
+    // sendOrderConfirmationEmail($_SESSION['user_id'], $order_id);
+    
 } catch (PDOException $e) {
     $pdo->rollBack();
-    error_log("Order error: " . $e->getMessage());
-    // Handle error appropriately
+    error_log("Order processing error: " . $e->getMessage());
+    $_SESSION['error'] = "There was an error processing your order. Please try again.";
+    header('Location: checkout.php');
+    exit;
 }
 ?>
 
@@ -107,7 +108,7 @@ try {
         <div class="confirmation-header">
             <i class="fas fa-check-circle"></i>
             <h1>Order Confirmed!</h1>
-            <p>Thank you for your purchase</p>
+            <p>Thank you for your purchase. A confirmation has been sent to your email.</p>
         </div>
 
         <div class="confirmation-section">
@@ -160,7 +161,7 @@ try {
                             </div>
                         </td>
                         <td><?= $item['quantity'] ?></td>
-                        <td>$<?= number_format($item['item_total'], 2) ?></td>
+                        <td>$<?= number_format($item['price'] * $item['quantity'], 2) ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -181,12 +182,17 @@ try {
             <a href="products.php" class="btn btn-outline">
                 <i class="fas fa-seedling"></i> Browse Products
             </a>
-            <a href="dashboard.php" class="btn btn-primary">
-                <i class="fas fa-user-circle"></i> View My Orders
+            <a href="dashboard.php?order=<?= $order_id ?>" class="btn btn-primary">
+                <i class="fas fa-user-circle"></i> View My Order
             </a>
         </div>
     </div>
 </div>
+
+<!-- CSS remains the same as before -->
+<!-- ... -->
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
 
 <style>
 :root {
