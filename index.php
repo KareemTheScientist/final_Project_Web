@@ -31,6 +31,7 @@ $sensors = $sensorsStmt->fetchAll(PDO::FETCH_ASSOC);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nabta - Smart Gardening Solutions</title>
+    <link rel="icon" type="image/png" href="img/NABTA.png">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -475,36 +476,52 @@ $sensors = $sensorsStmt->fetchAll(PDO::FETCH_ASSOC);
             $('.add-to-cart-btn').click(function(e) {
                 e.preventDefault();
                 
-                const href = $(this).attr('href');
                 const button = $(this);
+                const href = button.attr('href');
+                const urlParams = new URLSearchParams(href.split('?')[1]);
+                const plantId = urlParams.get('plant_id');
+                const productId = urlParams.get('product_id');
+                const quantity = 1; // Default quantity
                 
                 // Add loading state
                 button.html('<i class="fas fa-spinner fa-spin"></i> Adding');
                 button.prop('disabled', true);
                 
+                // Prepare data for POST request
+                const formData = new FormData();
+                if (plantId) formData.append('plant_id', plantId);
+                if (productId) formData.append('product_id', productId);
+                formData.append('quantity', quantity);
+                
                 $.ajax({
-                    url: href,
-                    type: 'GET',
+                    url: 'actions/add_to_cart.php',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
                     success: function(response) {
-                        // Update cart count
-                        $.get('actions/get_cart_count.php', function(data) {
-                            $('#cart-count').text(data).addClass('animate-bounce');
+                        if (response.success) {
+                            // Update cart count
+                            $('.cart-count').text(response.cart_count).addClass('animate-bounce');
                             setTimeout(() => {
-                                $('#cart-count').removeClass('animate-bounce');
+                                $('.cart-count').removeClass('animate-bounce');
                             }, 500);
-                        });
-                        
-                        // Show success state
-                        button.html('<i class="fas fa-check"></i> Added');
-                        setTimeout(() => {
-                            button.html('<i class="fas fa-shopping-cart"></i> Add');
-                            button.prop('disabled', false);
-                        }, 1500);
+                            
+                            // Show success state
+                            button.html('<i class="fas fa-check"></i> Added');
+                            setTimeout(() => {
+                                button.html('<i class="fas fa-shopping-cart"></i> Add');
+                                button.prop('disabled', false);
+                            }, 1500);
+                        } else {
+                            throw new Error(response.message || 'Failed to add to cart');
+                        }
                     },
-                    error: function() {
+                    error: function(xhr) {
+                        const response = xhr.responseJSON || {};
                         button.html('<i class="fas fa-shopping-cart"></i> Add');
                         button.prop('disabled', false);
-                        alert('Error adding item to cart. Please try again.');
+                        alert(response.message || 'Error adding item to cart. Please try again.');
                     }
                 });
             });

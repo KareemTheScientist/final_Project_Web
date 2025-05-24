@@ -2,197 +2,191 @@
 require_once __DIR__ . '/config/init.php';
 require_auth();
 
-// Redirect if checkout info is not set
-// if (empty($_SESSION['checkout_info']) || empty($_SESSION['checkout_info']['cart_items'])) {
-//     header('Location: cart.php');
-//     exit;
-// }
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-$page_title = "Order Confirmation | Nabta";
-include __DIR__ . '/includes/navbar.php';
+// Debug log
+error_log("Session contents: " . print_r($_SESSION, true));
 
-// Get checkout info from session
+// Check if checkout info exists
+if (!isset($_SESSION['checkout_info']) || empty($_SESSION['checkout_info'])) {
+    error_log("No checkout info found in session");
+    $_SESSION['error'] = "Please complete the checkout process first.";
+    header('Location: checkout.php');
+    exit;
+}
+
 $checkout_info = $_SESSION['checkout_info'];
-$shipping = $checkout_info['shipping'];
-$cart_items = $checkout_info['cart_items'];
+error_log("Checkout info: " . print_r($checkout_info, true));
 
-// Calculate order totals
-$subtotal = calculateCartSubtotal($cart_items);
-$shipping_cost = 5.99;
-$tax_rate = 0.08;
-$tax = $subtotal * $tax_rate;
-$total = $subtotal + $shipping_cost + $tax;
-$order_number = 'NAB-' . strtoupper(uniqid());
+// Validate checkout info
+if (!isset($checkout_info['shipping']) || !isset($checkout_info['cart_items'])) {
+    error_log("Invalid checkout info structure");
+    $_SESSION['error'] = "Invalid checkout information. Please try again.";
+    header('Location: checkout.php');
+    exit;
+}
 
-// Process order (save to database)
+// Function to calculate cart subtotal
+function calculateCartSubtotal($items) {
+    $subtotal = 0;
+    foreach ($items as $item) {
+        $subtotal += $item['price'] * $item['quantity'];
+    }
+    return $subtotal;
+}
+
 try {
     $pdo->beginTransaction();
 
-    // Save order
+    // Insert order
     $stmt = $pdo->prepare("
-        INSERT INTO orders (user_id, order_number, total_amount, shipping_address, payment_method, status)
-        VALUES (?, ?, ?, ?, ?, 'processing')
+        INSERT INTO orders (
+            user_id, 
+            first_name, 
+            last_name, 
+            email, 
+            address, 
+            city, 
+            country, 
+            payment_method, 
+            total_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
-    $shipping_address = implode(', ', [
-        $shipping['address'],
-        $shipping['address2'],
-        $shipping['city'],
-        $shipping['state'],
-        $shipping['zip'],
-        $shipping['country']
-    ]);
-
+    $total = calculateCartSubtotal($checkout_info['cart_items']);
+    
     $stmt->execute([
         $_SESSION['user_id'],
-        $order_number,
-        $total,
-        $shipping_address,
-        $checkout_info['payment_method']
+        $checkout_info['shipping']['first_name'],
+        $checkout_info['shipping']['last_name'],
+        $checkout_info['shipping']['email'],
+        $checkout_info['shipping']['address'],
+        $checkout_info['shipping']['city'],
+        $checkout_info['shipping']['country'],
+        $checkout_info['shipping']['payment_method'],
+        $total
     ]);
 
-    $order_id = $pdo->lastInsertId();
+    $orderId = $pdo->lastInsertId();
+    error_log("Order created with ID: " . $orderId);
 
-    // Save order items (both plants and products)
-    $plantStmt = $pdo->prepare("
-        INSERT INTO order_items (order_id, plant_id, quantity, price)
-        VALUES (?, ?, ?, ?)
-    ");
-    
-    $productStmt = $pdo->prepare("
-        INSERT INTO order_products (order_id, product_id, quantity, price)
-        VALUES (?, ?, ?, ?)
+    // Insert order items
+    $stmt = $pdo->prepare("
+        INSERT INTO order_items (
+            order_id, 
+            item_type, 
+            plant_id, 
+            product_id, 
+            quantity, 
+            price
+        ) VALUES (?, ?, ?, ?, ?, ?)
     ");
 
-    foreach ($cart_items as $item) {
-        if ($item['type'] === 'plant') {
-            $plantStmt->execute([
-                $order_id,
-                $item['item_id'],
-                $item['quantity'],
-                $item['price']
-            ]);
-        } elseif ($item['type'] === 'product') {
-            $productStmt->execute([
-                $order_id,
-                $item['item_id'],
-                $item['quantity'],
-                $item['price']
-            ]);
-        }
+    foreach ($checkout_info['cart_items'] as $item) {
+        $plantId = $item['type'] === 'plant' ? $item['item_id'] : null;
+        $productId = $item['type'] === 'product' ? $item['item_id'] : null;
+        
+        $stmt->execute([
+            $orderId,
+            $item['type'],
+            $plantId,
+            $productId,
+            $item['quantity'],
+            $item['price']
+        ]);
     }
 
     // Clear cart
     $stmt = $pdo->prepare("DELETE FROM cart_items WHERE cart_id = (SELECT id FROM carts WHERE user_id = ?)");
     $stmt->execute([$_SESSION['user_id']]);
+    error_log("Cart cleared for user: " . $_SESSION['user_id']);
+
+    // Clear checkout session
+    unset($_SESSION['checkout_info']);
 
     $pdo->commit();
-    
-    // Clear session checkout data
-    unset($_SESSION['checkout_info']);
-    
-    // Send confirmation email (would implement this function)
-    // sendOrderConfirmationEmail($_SESSION['user_id'], $order_id);
-    
-} catch (PDOException $e) {
+    error_log("Order process completed successfully");
+
+} catch (Exception $e) {
     $pdo->rollBack();
-    error_log("Order processing error: " . $e->getMessage());
+    error_log("Error processing order: " . $e->getMessage());
     $_SESSION['error'] = "There was an error processing your order. Please try again.";
     header('Location: checkout.php');
     exit;
 }
+
+$page_title = "Order Confirmation | Nabta";
+include __DIR__ . '/includes/navbar.php';
 ?>
 
 <div class="confirmation-container">
     <div class="confirmation-card">
-        <div class="confirmation-header">
+        <div class="success-icon">
             <i class="fas fa-check-circle"></i>
-            <h1>Order Confirmed!</h1>
-            <p>Thank you for your purchase. A confirmation has been sent to your email.</p>
         </div>
-
-        <div class="confirmation-section">
-            <div class="info-block">
-                <h3>Order Info</h3>
-                <p><strong>Order Number:</strong> <?= htmlspecialchars($order_number) ?></p>
-                <p><strong>Date:</strong> <?= date('F j, Y') ?></p>
-                <p><strong>Payment:</strong> <?= ucfirst(str_replace('_', ' ', $checkout_info['payment_method'])) ?>
-                    <?php if ($checkout_info['payment_method'] === 'credit_card'): ?>
-                        (****4242)
-                    <?php endif; ?>
-                </p>
-                <p><strong>Total:</strong> $<?= number_format($total, 2) ?></p>
-            </div>
-            <div class="info-block">
-                <h3>Shipping Info</h3>
-                <address>
-                    <?= htmlspecialchars($shipping['first_name'] . ' ' . $shipping['last_name']) ?><br>
-                    <?= htmlspecialchars($shipping['address']) ?><br>
-                    <?php if (!empty($shipping['address2'])): ?>
-                        <?= htmlspecialchars($shipping['address2']) ?><br>
-                    <?php endif; ?>
-                    <?= htmlspecialchars($shipping['city'] . ', ' . $shipping['state'] . ' ' . $shipping['zip']) ?><br>
-                    <?= htmlspecialchars($shipping['country']) ?>
-                </address>
-            </div>
-        </div>
-
-        <div class="order-items">
-            <h3>Your Items</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Qty</th>
-                        <th>Item Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($cart_items as $item): ?>
-                    <tr>
-                        <td>
-                            <div class="product-info">
+        
+        <h1>Order Confirmed!</h1>
+        <p class="order-number">Order #<?= $orderId ?></p>
+        
+        <div class="confirmation-details">
+            <div class="detail-section">
+                <h2>Order Summary</h2>
+                <div class="order-items">
+                    <?php foreach ($checkout_info['cart_items'] as $item): ?>
+                        <div class="order-item">
+                            <div class="item-image">
                                 <img src="<?= htmlspecialchars($item['image_url']) ?>" 
-                                     alt="<?= htmlspecialchars($item['name']) ?>" width="50">
-                                <div>
-                                    <?= htmlspecialchars($item['name']) ?>
-                                    <span class="item-type"><?= ucfirst($item['type']) ?></span>
-                                </div>
+                                     alt="<?= htmlspecialchars($item['name']) ?>">
                             </div>
-                        </td>
-                        <td><?= $item['quantity'] ?></td>
-                        <td>$<?= number_format($item['price'] * $item['quantity'], 2) ?></td>
-                    </tr>
+                            <div class="item-details">
+                                <h4><?= htmlspecialchars($item['name']) ?></h4>
+                                <span class="item-type"><?= ucfirst($item['type']) ?></span>
+                                <span class="item-quantity">Qty: <?= $item['quantity'] ?></span>
+                            </div>
+                            <div class="item-price">
+                                $<?= number_format($item['price'] * $item['quantity'], 2) ?>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
+                </div>
+                
+                <div class="order-total">
+                    <span>Total</span>
+                    <span>$<?= number_format($total, 2) ?></span>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h2>Shipping Information</h2>
+                <div class="shipping-info">
+                    <p>
+                        <strong><?= htmlspecialchars($checkout_info['shipping']['first_name']) ?> 
+                        <?= htmlspecialchars($checkout_info['shipping']['last_name']) ?></strong>
+                    </p>
+                    <p><?= htmlspecialchars($checkout_info['shipping']['address']) ?></p>
+                    <p>
+                        <?= htmlspecialchars($checkout_info['shipping']['city']) ?>, 
+                        <?= htmlspecialchars($checkout_info['shipping']['country']) ?>
+                    </p>
+                    <p><?= htmlspecialchars($checkout_info['shipping']['email']) ?></p>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h2>Payment Method</h2>
+                <p class="payment-method">
+                    <?= ucfirst(str_replace('_', ' ', $checkout_info['shipping']['payment_method'])) ?>
+                </p>
+            </div>
         </div>
-
-        <div class="totals">
-            <p><strong>Subtotal:</strong> $<?= number_format($subtotal, 2) ?></p>
-            <p><strong>Shipping:</strong> $<?= number_format($shipping_cost, 2) ?></p>
-            <p><strong>Tax:</strong> $<?= number_format($tax, 2) ?></p>
-            <p class="grand-total"><strong>Total:</strong> $<?= number_format($total, 2) ?></p>
-        </div>
-
+        
         <div class="confirmation-actions">
-            <a href="plants.php" class="btn btn-outline">
-                <i class="fas fa-leaf"></i> Shop More Plants
-            </a>
-            <a href="products.php" class="btn btn-outline">
-                <i class="fas fa-seedling"></i> Browse Products
-            </a>
-            <a href="dashboard.php?order=<?= $order_id ?>" class="btn btn-primary">
-                <i class="fas fa-user-circle"></i> View My Order
-            </a>
+            <a href="index.php" class="btn btn-primary">Continue Shopping</a>
         </div>
     </div>
 </div>
-
-<!-- CSS remains the same as before -->
-<!-- ... -->
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
 
 <style>
 :root {
@@ -206,7 +200,7 @@ try {
 }
 
 .confirmation-container {
-    max-width: 1000px;
+    max-width: 800px;
     margin: 2rem auto;
     padding: 0 1rem;
 }
@@ -216,86 +210,88 @@ try {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     padding: 2rem;
-}
-
-.confirmation-header {
     text-align: center;
-    margin-bottom: 2rem;
 }
 
-.confirmation-header i {
-    font-size: 3.5rem;
+.success-icon {
+    font-size: 4rem;
     color: var(--primary);
+    margin-bottom: 1rem;
 }
 
-.confirmation-header h1 {
-    margin: 0.5rem 0;
-    color: var(--primary);
+.confirmation-card h1 {
     font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
 }
 
-.confirmation-header p {
-    font-size: 1.1rem;
+.order-number {
     color: var(--secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
 }
 
-.confirmation-section {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2rem;
+.confirmation-details {
+    text-align: left;
+    margin: 2rem 0;
+}
+
+.detail-section {
     margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.detail-section h2 {
+    font-size: 1.25rem;
+    color: var(--dark);
+    margin-bottom: 1rem;
+}
+
+.order-items {
+    margin-bottom: 1.5rem;
+}
+
+.order-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #eee;
 }
 
-.info-block {
-    flex: 1;
-    min-width: 250px;
+.order-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
-.info-block h3 {
-    margin-bottom: 1rem;
-    color: var(--dark);
-}
-
-.info-block p, .info-block address {
-    margin: 0.5rem 0;
-    color: var(--secondary);
-}
-
-.order-items {
-    margin-bottom: 2rem;
-}
-
-.order-items h3 {
-    margin-bottom: 1rem;
-    color: var(--dark);
-}
-
-.order-items table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.order-items th, .order-items td {
-    padding: 0.75rem;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-}
-
-.order-items th {
-    font-weight: 500;
-    color: var(--dark);
-}
-
-.product-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.product-info img {
+.item-image {
+    width: 60px;
+    height: 60px;
     border-radius: 4px;
+    overflow: hidden;
+}
+
+.item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.item-details {
+    flex: 1;
+}
+
+.item-details h4 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
 }
 
 .item-type {
@@ -305,87 +301,76 @@ try {
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     color: #424242;
-    margin-top: 0.25rem;
+    margin-right: 0.5rem;
 }
 
-.totals {
-    text-align: right;
-    margin-bottom: 2rem;
+.item-quantity {
+    font-size: 0.875rem;
+    color: var(--secondary);
 }
 
-.totals p {
-    margin: 0.5rem 0;
+.item-price {
+    font-weight: 500;
 }
 
-.grand-total {
-    font-size: 1.2rem;
+.order-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--primary);
+    margin-top: 1rem;
+}
+
+.shipping-info p {
+    margin: 0.5rem 0;
+    color: var(--dark);
+}
+
+.payment-method {
+    font-size: 1.1rem;
+    color: var(--primary);
+    font-weight: 500;
 }
 
 .confirmation-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
     margin-top: 2rem;
 }
 
 .btn {
+    display: inline-block;
     padding: 0.75rem 1.5rem;
-    border-radius: var(--border-radius);
-    text-decoration: none;
+    font-size: 1rem;
     font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.btn-outline {
-    border: 1px solid var(--primary);
-    color: var(--primary);
-    background: transparent;
-}
-
-.btn-outline:hover {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
     border: none;
 }
 
+.btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+
 .btn-primary:hover {
-    background: var(--primary-dark);
+    background-color: var(--primary-dark);
 }
 
 @media (max-width: 768px) {
-    .confirmation-section {
-        flex-direction: column;
+    .confirmation-card {
+        padding: 1.5rem;
     }
     
-    .confirmation-actions {
-        flex-direction: column;
+    .success-icon {
+        font-size: 3rem;
     }
     
-    .confirmation-actions .btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .product-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .product-info img {
-        width: 40px;
+    .confirmation-card h1 {
+        font-size: 1.75rem;
     }
 }
 </style>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/footer.php'; ?> 

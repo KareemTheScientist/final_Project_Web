@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 04, 2025 at 01:17 AM
+-- Generation Time: May 10, 2025 at 02:25 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -72,7 +72,8 @@ CREATE TABLE `carts` (
 --
 
 INSERT INTO `carts` (`id`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 2, '2025-05-03 21:03:24', '2025-05-03 21:03:24');
+(4, 2, '2025-05-10 10:11:16', '2025-05-10 10:11:16'),
+(5, 1, '2025-05-10 12:20:18', '2025-05-10 12:20:18');
 
 -- --------------------------------------------------------
 
@@ -90,25 +91,6 @@ CREATE TABLE `cart_items` (
   `item_type` enum('plant','product') NOT NULL DEFAULT 'plant'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `cart_items`
---
-
-INSERT INTO `cart_items` (`id`, `cart_id`, `plant_id`, `product_id`, `quantity`, `added_at`, `item_type`) VALUES
-(2, 1, NULL, 2, 4, '2025-05-03 21:31:54', 'product'),
-(3, 1, NULL, 7, 2, '2025-05-03 21:32:03', 'product'),
-(4, 1, NULL, 3, 4, '2025-05-03 21:35:22', 'product'),
-(5, 1, NULL, 4, 1, '2025-05-03 21:35:23', 'product'),
-(6, 1, NULL, 11, 3, '2025-05-03 21:35:27', 'product'),
-(7, 1, NULL, 12, 3, '2025-05-03 21:35:29', 'product'),
-(8, 1, NULL, 10, 3, '2025-05-03 21:38:11', 'product'),
-(9, 1, NULL, 9, 1, '2025-05-03 21:38:38', 'product'),
-(10, 1, 33, NULL, 1, '2025-05-03 21:45:39', 'plant'),
-(11, 1, 21, NULL, 1, '2025-05-03 21:45:47', 'plant'),
-(12, 1, 23, NULL, 1, '2025-05-03 21:45:48', 'plant'),
-(13, 1, 18, NULL, 1, '2025-05-03 21:52:41', 'plant'),
-(14, 1, 19, NULL, 3, '2025-05-03 21:54:31', 'plant');
-
 -- --------------------------------------------------------
 
 --
@@ -118,11 +100,14 @@ INSERT INTO `cart_items` (`id`, `cart_id`, `plant_id`, `product_id`, `quantity`,
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `order_number` varchar(20) NOT NULL,
-  `total_amount` decimal(10,2) NOT NULL,
-  `shipping_address` text NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `address` varchar(255) NOT NULL,
+  `city` varchar(100) NOT NULL,
+  `country` varchar(100) NOT NULL,
   `payment_method` varchar(50) NOT NULL,
-  `status` enum('pending','processing','completed','cancelled') DEFAULT 'pending',
+  `total_amount` decimal(10,2) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -130,15 +115,14 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `order_number`, `total_amount`, `shipping_address`, `payment_method`, `status`, `created_at`) VALUES
-(1, 1, '', 36.23, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-01 13:39:32'),
-(2, 1, '', 24.62, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-01 13:52:14'),
-(3, 2, '', 79.70, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'paypal', 'completed', '2025-05-02 09:46:44'),
-(4, 2, '', 37.30, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-02 12:03:45'),
-(5, 2, '', 25.16, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:20:12'),
-(6, 2, '', 24.62, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:20:59'),
-(7, 1, '', 45.68, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'credit_card', 'completed', '2025-05-03 11:26:54'),
-(8, 2, '', 21.92, 'cairo egypt, giza gov, 6th of october, cairo, 3220001, Egypt', 'paypal', 'completed', '2025-05-03 22:18:46');
+INSERT INTO `orders` (`id`, `user_id`, `first_name`, `last_name`, `email`, `address`, `city`, `country`, `payment_method`, `total_amount`, `created_at`) VALUES
+(1, 2, 'kareem', 'refaat', 'test@gewewfq.com', 'cairo egypt', '6th of october', 'CA', 'paypal', 107.49, '2025-05-10 11:34:46'),
+(2, 2, 'kareem', 'refaat', 'test@gewewfq.com', 'cairo egypt', '6th of october', 'US', 'credit_card', 67.23, '2025-05-10 11:35:15'),
+(3, 2, 'kareem', 'refaat', 'kareemrefaat8008@gmail.com', 'cairo egypt', '6th of october', 'UK', 'credit_card', 17.25, '2025-05-10 11:37:45'),
+(4, 2, 'kareem', 'refaat', 'kareemrefaat8008@gmail.com', 'cairo egypt', '6th of october', 'US', 'credit_card', 17.25, '2025-05-10 11:39:30'),
+(5, 2, 'kareem', 'refaat', 'kareemrefaat8008@gmail.com', 'cairo egypt', '6th of october', 'US', 'credit_card', 9.75, '2025-05-10 11:41:25'),
+(6, 2, 'kareem', 'refaat', 'kareemrefaat8008@gmail.com', 'cairo egypt', '6th of october', 'US', 'cash_on_delivery', 152.98, '2025-05-10 12:18:52'),
+(7, 1, 'kareem', 'refaat', 'kareemrefaat8008@gmail.com', 'cairo egypt', '6th of october', 'US', 'cash_on_delivery', 89.99, '2025-05-10 12:20:45');
 
 -- --------------------------------------------------------
 
@@ -149,7 +133,9 @@ INSERT INTO `orders` (`id`, `user_id`, `order_number`, `total_amount`, `shipping
 CREATE TABLE `order_items` (
   `id` int(11) NOT NULL,
   `order_id` int(11) NOT NULL,
-  `plant_id` int(11) NOT NULL,
+  `item_type` enum('plant','product') NOT NULL,
+  `plant_id` int(11) DEFAULT NULL,
+  `product_id` int(11) DEFAULT NULL,
   `quantity` int(11) NOT NULL,
   `price` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -158,23 +144,24 @@ CREATE TABLE `order_items` (
 -- Dumping data for table `order_items`
 --
 
-INSERT INTO `order_items` (`id`, `order_id`, `plant_id`, `quantity`, `price`) VALUES
-(1, 1, 18, 1, 7.50),
-(2, 1, 19, 1, 9.75),
-(3, 1, 32, 1, 10.75),
-(4, 2, 18, 1, 7.50),
-(5, 2, 19, 1, 9.75),
-(6, 3, 19, 7, 9.75),
-(7, 4, 21, 1, 12.99),
-(8, 4, 23, 1, 7.25),
-(9, 4, 24, 1, 8.75),
-(10, 5, 23, 1, 7.25),
-(11, 5, 34, 1, 10.50),
-(12, 6, 18, 1, 7.50),
-(13, 6, 19, 1, 9.75),
-(14, 7, 18, 1, 7.50),
-(15, 7, 19, 3, 9.75),
-(16, 8, 27, 1, 14.75);
+INSERT INTO `order_items` (`id`, `order_id`, `item_type`, `plant_id`, `product_id`, `quantity`, `price`) VALUES
+(1, 1, 'plant', 34, NULL, 9, 10.50),
+(2, 1, 'plant', 21, NULL, 1, 12.99),
+(3, 2, 'product', NULL, 6, 1, 29.99),
+(4, 2, 'product', NULL, 5, 1, 19.99),
+(5, 2, 'plant', 18, NULL, 1, 7.50),
+(6, 2, 'plant', 19, NULL, 1, 9.75),
+(7, 3, 'plant', 18, NULL, 1, 7.50),
+(8, 3, 'plant', 19, NULL, 1, 9.75),
+(9, 4, 'plant', 18, NULL, 1, 7.50),
+(10, 4, 'plant', 19, NULL, 1, 9.75),
+(11, 5, 'plant', 19, NULL, 1, 9.75),
+(12, 6, 'plant', 19, NULL, 1, 9.75),
+(13, 6, 'plant', 32, NULL, 1, 10.75),
+(14, 6, 'plant', 18, NULL, 1, 7.50),
+(15, 6, 'product', NULL, 2, 1, 89.99),
+(16, 6, 'product', NULL, 3, 1, 34.99),
+(17, 7, 'product', NULL, 2, 1, 89.99);
 
 -- --------------------------------------------------------
 
@@ -241,20 +228,18 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `name`, `category`, `description`, `price`, `image_url`, `stock`, `created_at`) VALUES
-(1, 'smart garden 9', 'pot', '6\" self-watering pot with moisture sensor and reservoir', 24.99, '/FinalProject/final_Project_Web/img/smart-garden-9.jpg', 50, '2025-05-03 19:36:28'),
-(2, 'smart garden 3', 'pot', 'Complete hydroponic system with LED grow lights and pump', 89.99, '/FinalProject/final_Project_Web/img/smart-garden-3.jpg', 25, '2025-05-03 19:36:28'),
-(3, 'smart garden mini', 'pot', '8\" ceramic pot with integrated soil sensor', 34.99, '/FinalProject/final_Project_Web/img/smart-garden-mini.jpg', 40, '2025-05-03 19:36:28'),
-(4, 'wall-garden', 'pot', 'Space-saving hanging garden with 3 plant capacity', 49.99, '/FinalProject/final_Project_Web/img/wall-garden.jpg', 30, '2025-05-03 19:36:28'),
-(5, 'Soil Moisture Sensor', 'sensor', 'Wireless sensor for accurate soil moisture measurement', 19.99, '/FinalProject/final_Project_Web/img/soil-sensor.png', 100, '2025-05-03 19:36:28'),
-(6, 'Plant Health Monitor', 'sensor', 'Tracks light, temperature, humidity and soil nutrients', 29.99, '/FinalProject/final_Project_Web/img/health-monitor.png', 75, '2025-05-03 19:36:28'),
-(7, 'Water Level Sensor', 'sensor', 'Alerts when water reservoir needs refilling', 14.99, '/FinalProject/final_Project_Web/img/water-sensor.jpg', 60, '2025-05-03 19:36:28'),
-(8, 'Smart Garden Hub', 'sensor', 'Central hub to connect all your plant sensors', 39.99, '/FinalProject/final_Project_Web/img/garden-hub.jpg', 45, '2025-05-03 19:36:28'),
-(9, 'plant-food', 'utility', 'Essential tools for plant care (pruner, trowel, spray bottle)', 24.99, '/FinalProject/final_Project_Web/img/plant-food.png', 80, '2025-05-03 19:36:28'),
-(10, 'pet-plants', 'utility', 'Slow-release fertilizer for indoor plants (3 months supply)', 12.99, '/FinalProject/final_Project_Web/img/pet-plants.png', 120, '2025-05-03 19:36:28'),
-(11, 'Decorative Pebbles', 'utility', '1kg bag of natural pebbles for plant decoration', 8.99, '/FinalProject/final_Project_Web/img/pebbles.jpg', 200, '2025-05-03 19:36:28'),
-(12, 'rare-plants', 'utility', 'Premium glass mister for tropical plants', 14.99, '/FinalProject/final_Project_Web/img/rare-plants.png', 90, '2025-05-03 19:36:28'),
-(13, 'grow-domes', 'utility', 'Full spectrum LED bulb for plant growth', 18.99, '/FinalProject/final_Project_Web/img/grow-domes.png', 65, '2025-05-03 19:36:28'),
-(14, 'led-panel', 'utility', '50 reusable plant markers with pen', 6.99, '/FinalProject/final_Project_Web/img/led-panel.png', 150, '2025-05-03 19:36:28');
+(1, 'smart garden 9', 'pot', '6\" self-watering pot with moisture sensor and reservoir', 24.99, '/FinalProject/final_Project_Web/img/smart-garden-9.jpg', 42, '2025-05-03 19:36:28'),
+(2, 'smart garden 3', 'pot', 'Complete hydroponic system with LED grow lights and pump', 89.99, '/FinalProject/final_Project_Web/img/smart-garden-3.jpg', 0, '2025-05-03 19:36:28'),
+(3, 'smart garden mini', 'pot', '8\" ceramic pot with integrated soil sensor', 34.99, '/FinalProject/final_Project_Web/img/smart-garden-mini.jpg', 20, '2025-05-03 19:36:28'),
+(5, 'Soil Moisture Sensor', 'sensor', 'Wireless sensor for accurate soil moisture measurement', 19.99, '/FinalProject/final_Project_Web/img/soil-sensor.png', 93, '2025-05-03 19:36:28'),
+(6, 'Plant Health Monitor', 'sensor', 'Tracks light, temperature, humidity and soil nutrients', 29.99, '/FinalProject/final_Project_Web/img/health-monitor.png', 57, '2025-05-03 19:36:28'),
+(7, 'Water Level Sensor', 'sensor', 'Alerts when water reservoir needs refilling', 14.99, '/FinalProject/final_Project_Web/img/water-sensor.jpg', 50, '2025-05-03 19:36:28'),
+(9, 'plant-food', 'utility', 'Essential tools for plant care (pruner, trowel, spray bottle)', 24.99, '/FinalProject/final_Project_Web/img/plant-food.png', 77, '2025-05-03 19:36:28'),
+(10, 'pet-plants', 'utility', 'Slow-release fertilizer for indoor plants (3 months supply)', 12.99, '/FinalProject/final_Project_Web/img/pet-plants.png', 116, '2025-05-03 19:36:28'),
+(11, 'Decorative Pebbles', 'utility', '1kg bag of natural pebbles for plant decoration', 8.99, '/FinalProject/final_Project_Web/img/pebbles.jpg', 193, '2025-05-03 19:36:28'),
+(12, 'rare-plants', 'utility', 'Premium glass mister for tropical plants', 14.99, '/FinalProject/final_Project_Web/img/rare-plants.png', 86, '2025-05-03 19:36:28'),
+(13, 'grow-domes', 'utility', 'Full spectrum LED bulb for plant growth', 18.99, '/FinalProject/final_Project_Web/img/grow-domes.png', 64, '2025-05-03 19:36:28'),
+(14, 'led-panel', 'utility', '50 reusable plant markers with pen', 6.99, '/FinalProject/final_Project_Web/img/led-panel.png', 146, '2025-05-03 19:36:28');
 
 -- --------------------------------------------------------
 
@@ -294,7 +279,13 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `created_at`, `remember_token`, `token_expires`) VALUES
 (1, 'kareem', 'starsbrawl365@gmail.com', '$2y$10$sFmEQ0FZEUMuOcTPH7hJ8uGi4RaxeCz7QXF0lwE/lsbmkSekl9TTG', '2025-04-12 19:46:27', NULL, NULL),
-(2, 'ahmed', 'ahmed@gmail.com', '$2y$10$zPS3DG6TDWyrG6dvIz2GjunBGfY2RYkFV6nfRXFjvqoPgt.V5Lu5y', '2025-04-12 22:28:26', 'c59600d598f213cac62039591b85a55ab7a68783bcaeae05d3ae8ea0c9e8278e', '2025-06-02 21:40:35');
+(2, 'ahmed', 'ahmed@gmail.com', '$2y$10$zPS3DG6TDWyrG6dvIz2GjunBGfY2RYkFV6nfRXFjvqoPgt.V5Lu5y', '2025-04-12 22:28:26', 'c59600d598f213cac62039591b85a55ab7a68783bcaeae05d3ae8ea0c9e8278e', '2025-06-02 21:40:35'),
+(3, 'test', 'test@gewewfq.com', '$2y$10$hNlqZGf9MUMLDX4uXmjObOkpFneqObVLEzd3PYeQooQO4xRRz.Ju6', '2025-05-05 08:57:42', NULL, NULL),
+(4, 'noha', 'noha@gmail.com', '$2y$10$vnskny5yyL7QUr0fJwc/jeUgmnKOM9EVj0hzA9V4nZz4sfG39cihC', '2025-05-05 11:17:51', NULL, NULL),
+(5, 'ola', 'ola@gmail.com', '$2y$10$Ax78zLZMcpp37kt43NbTn.Jmm/yap//wd2RDkD5ON9ai7JiD7jDcW', '2025-05-05 11:18:43', NULL, NULL),
+(6, 'yousef', 'yousef@gmail.com', '$2y$10$p35iVkDqFhO6YbhA7gD42uc9TIWGNCMEgB5LfllYqYHMGLAWjFNs6', '2025-05-05 11:59:19', NULL, NULL),
+(7, 'abdullah', 'abdu123@gmail.com', '$2y$10$Ie34wYYzxQgGBfHDLiVsL.TXuX14IRRWUdo3RyMfWGBv/Lx2KpgYO', '2025-05-06 06:03:13', NULL, NULL),
+(8, 'amr', 'amr@gmail.com', '$2y$10$653ELecpcAwyA29fy9SrAee3rXFwWCHMW4WsPOhROIXTfuUtErKBi', '2025-05-10 09:41:21', NULL, NULL);
 
 --
 -- Indexes for dumped tables
@@ -324,6 +315,7 @@ ALTER TABLE `carts`
 --
 ALTER TABLE `cart_items`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_cart_item` (`cart_id`,`plant_id`,`product_id`,`item_type`),
   ADD KEY `cart_id` (`cart_id`),
   ADD KEY `plant_id` (`plant_id`),
   ADD KEY `fk_cart_items_product` (`product_id`);
@@ -341,7 +333,8 @@ ALTER TABLE `orders`
 ALTER TABLE `order_items`
   ADD PRIMARY KEY (`id`),
   ADD KEY `order_id` (`order_id`),
-  ADD KEY `plant_id` (`plant_id`);
+  ADD KEY `plant_id` (`plant_id`),
+  ADD KEY `product_id` (`product_id`);
 
 --
 -- Indexes for table `plants`
@@ -384,25 +377,25 @@ ALTER TABLE `blogs`
 -- AUTO_INCREMENT for table `carts`
 --
 ALTER TABLE `carts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `cart_items`
 --
 ALTER TABLE `cart_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=243;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `plants`
@@ -426,7 +419,7 @@ ALTER TABLE `subscriptions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Constraints for dumped tables
@@ -451,14 +444,15 @@ ALTER TABLE `cart_items`
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
 
 --
 -- Constraints for table `order_items`
 --
 ALTER TABLE `order_items`
-  ADD CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
-  ADD CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`plant_id`) REFERENCES `plants` (`id`);
+  ADD CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_order_items_plant` FOREIGN KEY (`plant_id`) REFERENCES `plants` (`id`),
+  ADD CONSTRAINT `fk_order_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`);
 
 --
 -- Constraints for table `subscriptions`

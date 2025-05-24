@@ -35,11 +35,21 @@ try {
         $items_stmt = $pdo->prepare("
             SELECT 
                 oi.*,
-                p.name as plant_name,
-                p.image_url,
-                p.short_description
+                CASE 
+                    WHEN oi.item_type = 'plant' THEN p.name
+                    WHEN oi.item_type = 'product' THEN pr.name
+                END as item_name,
+                CASE 
+                    WHEN oi.item_type = 'plant' THEN p.image_url
+                    WHEN oi.item_type = 'product' THEN pr.image_url
+                END as image_url,
+                CASE 
+                    WHEN oi.item_type = 'plant' THEN p.short_description
+                    WHEN oi.item_type = 'product' THEN pr.description
+                END as description
             FROM order_items oi
-            JOIN plants p ON oi.plant_id = p.id
+            LEFT JOIN plants p ON oi.plant_id = p.id AND oi.item_type = 'plant'
+            LEFT JOIN products pr ON oi.product_id = pr.id AND oi.item_type = 'product'
             WHERE oi.order_id = ?
         ");
         $items_stmt->execute([$order_id]);
@@ -51,9 +61,18 @@ try {
     $error_message = "We're experiencing technical difficulties. Please try again later.";
 }
 
-$page_title = "Order Details #" . ($order['order_number'] ?? $order_id);
+$page_title = "Order Details #" . $order_id;
 include __DIR__ . '/includes/navbar.php';
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Details - Nabta</title>
+    <link rel="icon" type="image/png" href="img/NABTA.png">
+</head>
 
 <div class="order-details-container">
     <?php if (!empty($error_message)): ?>
@@ -65,16 +84,11 @@ include __DIR__ . '/includes/navbar.php';
             <div>
                 <h1>
                     <i class="fas fa-receipt"></i> 
-                    Order #<?= $order['order_number'] ? htmlspecialchars($order['order_number']) : 'ORD-' . $order['id'] ?>
+                    Order #<?= $order_id ?>
                 </h1>
                 <p class="text-muted">
                     Placed on <?= date('F j, Y \a\t g:i A', strtotime($order['created_at'])) ?>
                 </p>
-            </div>
-            <div class="order-status">
-                <span class="status-badge status-<?= $order['status'] ?>">
-                    <?= ucfirst($order['status']) ?>
-                </span>
             </div>
         </div>
 
@@ -97,11 +111,11 @@ include __DIR__ . '/includes/navbar.php';
                                 <td>
                                     <div class="product-info">
                                         <img src="<?= htmlspecialchars($item['image_url']) ?>" 
-                                             alt="<?= htmlspecialchars($item['plant_name']) ?>" 
+                                             alt="<?= htmlspecialchars($item['item_name']) ?>" 
                                              class="product-image">
                                         <div>
-                                            <h4><?= htmlspecialchars($item['plant_name']) ?></h4>
-                                            <p class="text-muted"><?= htmlspecialchars($item['short_description']) ?></p>
+                                            <h4><?= htmlspecialchars($item['item_name']) ?></h4>
+                                            <p class="text-muted"><?= htmlspecialchars($item['description']) ?></p>
                                         </div>
                                     </div>
                                 </td>
@@ -127,7 +141,7 @@ include __DIR__ . '/includes/navbar.php';
                     <div class="details-card">
                         <div class="detail-row">
                             <span class="detail-label">Name:</span>
-                            <span class="detail-value"><?= htmlspecialchars($order['username']) ?></span>
+                            <span class="detail-value"><?= htmlspecialchars($order['first_name'] . ' ' . $order['last_name']) ?></span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Email:</span>
@@ -141,12 +155,34 @@ include __DIR__ . '/includes/navbar.php';
                     <div class="details-card">
                         <div class="detail-row">
                             <span class="detail-label">Address:</span>
-                            <span class="detail-value"><?= nl2br(htmlspecialchars($order['shipping_address'])) ?></span>
+                            <span class="detail-value"><?= htmlspecialchars($order['address']) ?></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">City:</span>
+                            <span class="detail-value"><?= htmlspecialchars($order['city']) ?></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Country:</span>
+                            <span class="detail-value"><?= htmlspecialchars($order['country']) ?></span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">Payment Method:</span>
                             <span class="detail-value">
-                                <?= $order['payment_method'] === 'credit_card' ? 'Credit Card' : ucfirst($order['payment_method']) ?>
+                                <?php
+                                switch($order['payment_method']) {
+                                    case 'credit_card':
+                                        echo '<i class="fas fa-credit-card"></i> Credit Card';
+                                        break;
+                                    case 'paypal':
+                                        echo '<i class="fab fa-paypal"></i> PayPal';
+                                        break;
+                                    case 'cash_on_delivery':
+                                        echo '<i class="fas fa-money-bill-wave"></i> Cash on Delivery';
+                                        break;
+                                    default:
+                                        echo ucfirst($order['payment_method']);
+                                }
+                                ?>
                             </span>
                         </div>
                     </div>

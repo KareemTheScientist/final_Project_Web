@@ -3,7 +3,7 @@
 
 // Define base path constants
 define('ROOT_PATH', dirname(__DIR__) . DIRECTORY_SEPARATOR);
-define('BASE_URL', '/FinalProject/final_Project_Web/'); // Adjust if your base URL is different
+define('BASE_URL', 'FinalProject/final_Project_Web'); // Removed leading slash
 
 // Ensure session starts before any output
 if (session_status() === PHP_SESSION_NONE) {
@@ -28,7 +28,7 @@ try {
  * Generate full URL from a relative path
  */
 function url($path = '') {
-    return BASE_URL . ltrim($path, '/');
+    return '/' . BASE_URL . '/' . ltrim($path, '/');
 }
 
 /**

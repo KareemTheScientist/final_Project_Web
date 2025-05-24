@@ -2,9 +2,9 @@
 require_once './config/init.php';
 
 // Redirect if already logged in
-if (is_logged_in()) {
-    redirect('dashboard.php');
-}
+// if (is_logged_in()) {
+//     redirect('dashboard.php');
+// }
 
 $error = '';
 $username = '';
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $stmt = $pdo->prepare("SELECT id, username, password, email FROM users 
-                                   WHERE username = :username OR email = :email");
+                                WHERE username = :username OR email = :email");
             $stmt->execute([':username' => $username, ':email' => $username]);
 
             if ($user = $stmt->fetch()) {
@@ -33,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     session_regenerate_id(true);
 
+                    // Get the base URL of the application
+                    $base_url = rtrim(dirname($_SERVER['PHP_SELF']), '/');
                     $redirect = $_SESSION['redirect_url'] ?? 'dashboard.php';
                     unset($_SESSION['redirect_url']);
                     redirect($redirect);
@@ -54,7 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Login to your Nabta account">
-    <title>Login | Nabta</title>
+    <title>Login - Nabta</title>
+    <link rel="icon" type="image/png" href="img/NABTA.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {

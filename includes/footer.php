@@ -62,7 +62,7 @@ $current_year = date('Y');
 
         <!-- Copyright -->
         <div class="footer-bottom">
-            <p>&copy; <?php echo $current_year; ?> Click & Grow Egypt. All rights reserved.</p>
+            <p>&copy; <?php echo $current_year; ?>Nabta Corp Egypt. All rights reserved.</p>
             <div class="footer-legal">
                 <a href="privacy.php">Privacy Policy</a>
                 <a href="terms.php">Terms of Use</a>

@@ -63,6 +63,7 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title) ?> | Nabta</title>
+    <link rel="icon" type="image/png" href="img/NABTA.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -118,6 +119,9 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
         }
         
         .plant-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
             background: var(--white);
             border-radius: 8px;
             overflow: hidden;
@@ -188,35 +192,56 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             min-height: 40px;
         }
         
-        .add-to-cart {
+        .plant-link {
+            text-decoration: none;
+            color: inherit;
             display: block;
+            margin-bottom: 15px;
+        }
+        
+        .plant-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .plant-actions {
+            margin-top: auto;
+            padding: 15px;
+            background: var(--white);
+            border-top: 1px solid var(--light);
+        }
+        
+        .plant-card .quantity-controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            background: var(--white);
+        }
+        
+        .plant-card .add-to-cart {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             background: var(--primary);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.3s;
             font-size: 0.9rem;
+            transition: background 0.3s;
+            position: relative;
+            z-index: 3;
         }
         
-        .add-to-cart:hover {
+        .plant-card .add-to-cart:hover {
             background: var(--primary-dark);
         }
         
-        .add-to-cart:disabled {
+        .plant-card .add-to-cart:disabled {
             background: var(--gray);
             cursor: not-allowed;
         }
         
-        .quantity-controls {
-            display: flex;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        
-        .quantity-btn {
+        .plant-card .quantity-btn {
             background: var(--light);
             border: none;
             width: 30px;
@@ -224,15 +249,19 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            position: relative;
+            z-index: 3;
         }
         
-        .quantity-input {
+        .plant-card .quantity-input {
             width: 40px;
             text-align: center;
             margin: 0 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 5px;
+            position: relative;
+            z-index: 3;
         }
         
         .pagination {
@@ -324,25 +353,29 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             <div class="plants-grid">
                 <?php foreach ($plants as $plant): ?>
                 <div class="plant-card" data-plant-id="<?= $plant['id'] ?>">
-                    <div class="plant-image-container">
-                        <img src="<?= htmlspecialchars($plant['image_url']) ?>" 
-                             alt="<?= htmlspecialchars($plant['name']) ?>" 
-                             class="plant-image">
+                    <a href="<?= url('plant_details.php?id=' . $plant['id']) ?>" class="plant-link">
+                        <div class="plant-image-container">
+                            <img src="<?= htmlspecialchars($plant['image_url']) ?>" 
+                                 alt="<?= htmlspecialchars($plant['name']) ?>" 
+                                 class="plant-image">
+                            
+                            <?php if ($plant['is_featured']): ?>
+                                <span class="plant-badge">Featured</span>
+                            <?php endif; ?>
+                            
+                            <?php if ($plant['is_new']): ?>
+                                <span class="plant-badge new-badge">New</span>
+                            <?php endif; ?>
+                        </div>
                         
-                        <?php if ($plant['is_featured']): ?>
-                            <span class="plant-badge">Featured</span>
-                        <?php endif; ?>
-                        
-                        <?php if ($plant['is_new']): ?>
-                            <span class="plant-badge new-badge">New</span>
-                        <?php endif; ?>
-                    </div>
+                        <div class="plant-info">
+                            <h3 class="plant-name"><?= htmlspecialchars($plant['name']) ?></h3>
+                            <div class="plant-price">$<?= number_format($plant['price'], 2) ?></div>
+                            <p class="plant-desc"><?= htmlspecialchars($plant['short_description']) ?></p>
+                        </div>
+                    </a>
                     
-                    <div class="plant-info">
-                        <h3 class="plant-name"><?= htmlspecialchars($plant['name']) ?></h3>
-                        <div class="plant-price">$<?= number_format($plant['price'], 2) ?></div>
-                        <p class="plant-desc"><?= htmlspecialchars($plant['short_description']) ?></p>
-                        
+                    <div class="plant-actions">
                         <div class="quantity-controls">
                             <button class="quantity-btn minus" data-plant-id="<?= $plant['id'] ?>">-</button>
                             <input type="number" class="quantity-input" value="1" min="1" max="10" data-plant-id="<?= $plant['id'] ?>">
@@ -386,8 +419,6 @@ $page_title = "Our Plants" . ($category ? " - " . ucfirst($category) : "");
             <?php endif; ?>
         <?php endif; ?>
     </div>
-
-    <?php include __DIR__ . '/includes/footer.php'; ?>
 
     <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -513,5 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCartCount();
 });
 </script>
+
+<?php include __DIR__ . './includes/footer.php'; ?>
 </body>
 </html>

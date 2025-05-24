@@ -84,8 +84,8 @@ $is_index_page = $current_page === 'index.php';
             </li>
 
             <li>
-                <a href="<?= url('/services.php') ?>" class="<?= $current_page === 'services.php' ? 'active' : '' ?>">
-                    <i class="fas fa-concierge-bell"></i> <span class="link-text">Services</span>
+                <a href="<?= url('/about.php') ?>" class="<?= $current_page === 'about.php' ? 'active' : '' ?>">
+                    <i class="fas fa-info-circle"></i> <span class="link-text">About Us</span>
                 </a>
             </li>
 
@@ -114,23 +114,21 @@ $is_index_page = $current_page === 'index.php';
                         <a href="<?= url('/dashboard.php') ?>"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                         <a href="<?= url('/orders.php') ?>"><i class="fas fa-receipt"></i> My Orders</a>
                         <a href="<?= url('/account.php') ?>"><i class="fas fa-user-cog"></i> Account Settings</a>
-                        <?//php// if (has_subscription()): ?>
-                            <a href="<?= url('/subscriptions.php') ?>"><i class="fas fa-calendar-check"></i> Subscriptions</a>
-                        <?php endif; ?>
+                        <a href="<?= url('/subscriptions.php') ?>"><i class="fas fa-crown"></i> Subscriptions</a>
                         <div class="dropdown-divider"></div>
                         <a href="<?= url('/logout.php') ?>"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>
-            <?//p else: ?>
-                <!-- <div class="auth-buttons">
+            <?php else: ?>
+                <div class="auth-buttons">
                     <a href="<?= url('/login.php') ?>" class="btn-login">
                         <i class="fas fa-sign-in-alt"></i> <span class="btn-text">Login</span>
                     </a>
                     <a href="<?= url('/register.php') ?>" class="btn-signup">
                         <i class="fas fa-user-plus"></i> <span class="btn-text">Register</span>
                     </a>
-                </div> -->
-            <?php //endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </nav>
@@ -233,6 +231,18 @@ $is_index_page = $current_page === 'index.php';
         top: 0;
         z-index: 1000;
         padding: 0 20px;
+    }
+
+    .navbar:hover {
+        transform: none;
+    }
+
+    .navbar::before {
+        display: none;
+    }
+
+    .navbar::before:hover {
+        transform: none;
     }
 
     .nav-container {
@@ -634,5 +644,3 @@ $is_index_page = $current_page === 'index.php';
         }
     }
 </style>
-
-</html>

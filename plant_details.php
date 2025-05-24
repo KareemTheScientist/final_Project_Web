@@ -1,30 +1,30 @@
 <?php
 require_once __DIR__ . './config/init.php';
 
-// Get product ID from URL
-$product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+// Get plant ID from URL
+$plant_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 // Initialize variables
-$product = null;
+$plant = null;
 $error = '';
 
 try {
-    // Get product details
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE id = :id");
-    $stmt->bindParam(':id', $product_id);
+    // Get plant details
+    $stmt = $pdo->prepare("SELECT * FROM plants WHERE id = :id");
+    $stmt->bindParam(':id', $plant_id);
     $stmt->execute();
-    $product = $stmt->fetch(PDO::FETCH_ASSOC);
+    $plant = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if (!$product) {
-        $error = "Product not found.";
+    if (!$plant) {
+        $error = "Plant not found.";
     }
 } catch (PDOException $e) {
-    error_log("Product details error: " . $e->getMessage());
-    $error = "We're having trouble loading the product details. Please try again later.";
+    error_log("Plant details error: " . $e->getMessage());
+    $error = "We're having trouble loading the plant details. Please try again later.";
 }
 
 // Set page title
-$page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found";
+$page_title = $plant ? htmlspecialchars($plant['name']) : "Plant Not Found";
 ?>
 
 <!DOCTYPE html>
@@ -46,13 +46,13 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
             --white: #ffffff;
         }
         
-        .product-details-container {
+        .plant-details-container {
             max-width: 1200px;
             margin: 40px auto;
             padding: 0 20px;
         }
         
-        .product-details {
+        .plant-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 40px;
@@ -62,43 +62,43 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
             padding: 30px;
         }
         
-        .product-image-container {
+        .plant-image-container {
             position: relative;
             border-radius: 8px;
             overflow: hidden;
         }
         
-        .product-image {
+        .plant-image {
             width: 100%;
             height: auto;
             display: block;
         }
         
-        .product-info {
+        .plant-info {
             display: flex;
             flex-direction: column;
         }
         
-        .product-name {
+        .plant-name {
             font-size: 2rem;
             color: var(--secondary);
             margin: 0 0 20px;
         }
         
-        .product-price {
+        .plant-price {
             font-size: 1.5rem;
             color: var(--primary);
             font-weight: bold;
             margin-bottom: 20px;
         }
         
-        .product-description {
+        .plant-description {
             color: var(--gray);
             line-height: 1.6;
             margin-bottom: 30px;
         }
         
-        .product-meta {
+        .plant-meta {
             margin-bottom: 30px;
         }
         
@@ -110,6 +110,37 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
         }
         
         .meta-item i {
+            width: 20px;
+            margin-right: 10px;
+            color: var(--primary);
+        }
+        
+        .care-instructions {
+            background: var(--light);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .care-instructions h3 {
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+        
+        .care-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .care-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: var(--gray);
+        }
+        
+        .care-list i {
             width: 20px;
             margin-right: 10px;
             color: var(--primary);
@@ -171,19 +202,6 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
             margin: 20px 0;
         }
         
-        .stock-info {
-            font-size: 1rem;
-            margin-bottom: 20px;
-        }
-        
-        .low-stock {
-            color: #ff9800;
-        }
-        
-        .out-of-stock {
-            color: #f44336;
-        }
-        
         /* Cart notification styles */
         .cart-notification {
             position: fixed;
@@ -216,7 +234,7 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
         }
         
         @media (max-width: 768px) {
-            .product-details {
+            .plant-details {
                 grid-template-columns: 1fr;
             }
         }
@@ -228,54 +246,62 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
     <!-- Cart notification element -->
     <div id="cart-notification" class="cart-notification"></div>
     
-    <div class="product-details-container">
+    <div class="plant-details-container">
         <?php if ($error): ?>
             <div class="error-message">
                 <i class="fas fa-exclamation-circle"></i> <?= $error ?>
             </div>
-        <?php elseif ($product): ?>
-            <div class="product-details">
-                <div class="product-image-container">
-                    <img src="<?= htmlspecialchars($product['image_url']) ?>" 
-                         alt="<?= htmlspecialchars($product['name']) ?>" 
-                         class="product-image">
+        <?php elseif ($plant): ?>
+            <div class="plant-details">
+                <div class="plant-image-container">
+                    <img src="<?= htmlspecialchars($plant['image_url']) ?>" 
+                         alt="<?= htmlspecialchars($plant['name']) ?>" 
+                         class="plant-image">
                 </div>
                 
-                <div class="product-info">
-                    <h1 class="product-name"><?= htmlspecialchars($product['name']) ?></h1>
-                    <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
+                <div class="plant-info">
+                    <h1 class="plant-name"><?= htmlspecialchars($plant['name']) ?></h1>
+                    <div class="plant-price">$<?= number_format($plant['price'], 2) ?></div>
                     
-                    <div class="stock-info <?= $product['stock'] < 5 ? 'low-stock' : '' ?>">
-                        <?php if ($product['stock'] > 0): ?>
-                            <i class="fas fa-check-circle"></i> In stock: <?= $product['stock'] ?> units
-                        <?php else: ?>
-                            <i class="fas fa-times-circle"></i> Out of stock
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="product-meta">
+                    <div class="plant-meta">
                         <div class="meta-item">
                             <i class="fas fa-tag"></i>
-                            <span>Category: <?= ucfirst(htmlspecialchars($product['category'])) ?></span>
+                            <span>Category: <?= ucfirst(htmlspecialchars($plant['category'])) ?></span>
                         </div>
                         <div class="meta-item">
-                            <i class="fas fa-box"></i>
-                            <span>SKU: <?= htmlspecialchars($product['sku'] ?? 'N/A') ?></span>
+                            <i class="fas fa-leaf"></i>
+                            <span>Type: <?= htmlspecialchars($plant['type'] ?? 'N/A') ?></span>
                         </div>
                     </div>
                     
-                    <p class="product-description"><?= nl2br(htmlspecialchars($product['description'])) ?></p>
-                    
-                    <div class="quantity-controls">
-                        <button class="quantity-btn minus" data-product-id="<?= $product['id'] ?>">-</button>
-                        <input type="number" class="quantity-input" value="1" min="1" max="<?= min(10, $product['stock']) ?>" 
-                               data-product-id="<?= $product['id'] ?>" <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
-                        <button class="quantity-btn plus" data-product-id="<?= $product['id'] ?>">+</button>
+                    <div class="care-instructions">
+                        <h3>Care Instructions</h3>
+                        <ul class="care-list">
+                            <li>
+                                <i class="fas fa-sun"></i>
+                                <span>Light: <?= htmlspecialchars($plant['light_requirements'] ?? 'Moderate') ?></span>
+                            </li>
+                            <li>
+                                <i class="fas fa-tint"></i>
+                                <span>Water: <?= htmlspecialchars($plant['water_requirements'] ?? 'Moderate') ?></span>
+                            </li>
+                            <li>
+                                <i class="fas fa-temperature-high"></i>
+                                <span>Temperature: <?= htmlspecialchars($plant['temperature_range'] ?? '18-24°C') ?></span>
+                            </li>
+                        </ul>
                     </div>
                     
-                    <button class="add-to-cart" data-product-id="<?= $product['id'] ?>" <?= $product['stock'] <= 0 ? 'disabled' : '' ?>>
-                        <i class="fas fa-cart-plus"></i> 
-                        <?= $product['stock'] > 0 ? 'Add to Cart' : 'Out of Stock' ?>
+                    <p class="plant-description"><?= nl2br(htmlspecialchars($plant['short_description'])) ?></p>
+                    
+                    <div class="quantity-controls">
+                        <button class="quantity-btn minus" data-plant-id="<?= $plant['id'] ?>">-</button>
+                        <input type="number" class="quantity-input" value="1" min="1" max="10" data-plant-id="<?= $plant['id'] ?>">
+                        <button class="quantity-btn plus" data-plant-id="<?= $plant['id'] ?>">+</button>
+                    </div>
+                    
+                    <button class="add-to-cart" data-plant-id="<?= $plant['id'] ?>">
+                        <i class="fas fa-cart-plus"></i> Add to Cart
                     </button>
                 </div>
             </div>
@@ -323,14 +349,13 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
         // Quantity controls
         document.querySelectorAll('.quantity-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                const productId = this.dataset.productId;
-                const input = document.querySelector(`.quantity-input[data-product-id="${productId}"]`);
+                const plantId = this.dataset.plantId;
+                const input = document.querySelector(`.quantity-input[data-plant-id="${plantId}"]`);
                 let value = parseInt(input.value);
-                const max = parseInt(input.max);
                 
                 if (this.classList.contains('minus') && value > 1) {
                     input.value = value - 1;
-                } else if (this.classList.contains('plus') && value < max) {
+                } else if (this.classList.contains('plus') && value < 10) {
                     input.value = value + 1;
                 }
             });
@@ -340,8 +365,8 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
         const addToCartBtn = document.querySelector('.add-to-cart');
         if (addToCartBtn) {
             addToCartBtn.addEventListener('click', async function() {
-                const productId = this.dataset.productId;
-                const productName = document.querySelector('.product-name').textContent;
+                const plantId = this.dataset.plantId;
+                const plantName = document.querySelector('.plant-name').textContent;
                 const quantity = parseInt(document.querySelector('.quantity-input').value);
                 
                 // Disable button during request
@@ -355,7 +380,7 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: `product_id=${productId}&quantity=${quantity}`
+                        body: `plant_id=${plantId}&quantity=${quantity}`
                     });
                     
                     const data = await response.json();
@@ -365,7 +390,7 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
                     }
                     
                     // Show success notification
-                    showNotification(`${productName} added to cart (${quantity})`);
+                    showNotification(`${plantName} added to cart (${quantity})`);
                     
                     // Update cart count
                     if (data.cart_count !== undefined) {
@@ -404,4 +429,4 @@ $page_title = $product ? htmlspecialchars($product['name']) : "Product Not Found
 
     <?php include __DIR__ . './includes/footer.php'; ?>
 </body>
-</html>
+</html> 

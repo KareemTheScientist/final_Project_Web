@@ -63,6 +63,7 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title) ?> | Nabta</title>
+    <link rel="icon" type="image/png" href="img/NABTA.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Same styles as plants.php */
@@ -119,6 +120,9 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
         }
         
         .product-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
             background: var(--white);
             border-radius: 8px;
             overflow: hidden;
@@ -183,35 +187,44 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             min-height: 40px;
         }
         
-        .add-to-cart {
-            display: block;
+        .product-actions {
+            margin-top: auto;
+            padding: 15px;
+            background: var(--white);
+            border-top: 1px solid var(--light);
+        }
+        
+        .product-card .quantity-controls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            background: var(--white);
+        }
+        
+        .product-card .add-to-cart {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             background: var(--primary);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            transition: background 0.3s;
             font-size: 0.9rem;
+            transition: background 0.3s;
+            position: relative;
+            z-index: 3;
         }
         
-        .add-to-cart:hover {
+        .product-card .add-to-cart:hover {
             background: var(--primary-dark);
         }
         
-        .add-to-cart:disabled {
+        .product-card .add-to-cart:disabled {
             background: var(--gray);
             cursor: not-allowed;
         }
         
-        .quantity-controls {
-            display: flex;
-            margin-bottom: 10px;
-            align-items: center;
-        }
-        
-        .quantity-btn {
+        .product-card .quantity-btn {
             background: var(--light);
             border: none;
             width: 30px;
@@ -219,15 +232,19 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
+            position: relative;
+            z-index: 3;
         }
         
-        .quantity-input {
+        .product-card .quantity-input {
             width: 40px;
             text-align: center;
             margin: 0 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 5px;
+            position: relative;
+            z-index: 3;
         }
         
         .pagination {
@@ -304,6 +321,18 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
         .cart-notification i {
             font-size: 1.2em;
         }
+        
+        .product-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .product-link:hover {
+            text-decoration: none;
+            color: inherit;
+        }
     </style>
 </head>
 <body>
@@ -333,20 +362,24 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             <div class="products-grid">
                 <?php foreach ($products as $product): ?>
                 <div class="product-card" data-product-id="<?= $product['id'] ?>">
-                    <div class="product-image-container">
-                        <img src="<?= htmlspecialchars($product['image_url']) ?>" 
-                             alt="<?= htmlspecialchars($product['name']) ?>" 
-                             class="product-image">
-                    </div>
-                    
-                    <div class="product-info">
-                        <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
-                        <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
-                        <div class="stock-info <?= $product['stock'] < 5 ? 'low-stock' : '' ?>">
-                            <?= $product['stock'] > 0 ? "In stock: {$product['stock']}" : "Out of stock" ?>
+                    <a href="<?= url('product_details.php?id=' . $product['id']) ?>" class="product-link">
+                        <div class="product-image-container">
+                            <img src="<?= htmlspecialchars($product['image_url']) ?>" 
+                                 alt="<?= htmlspecialchars($product['name']) ?>" 
+                                 class="product-image">
                         </div>
-                        <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
                         
+                        <div class="product-info">
+                            <h3 class="product-name"><?= htmlspecialchars($product['name']) ?></h3>
+                            <div class="product-price">$<?= number_format($product['price'], 2) ?></div>
+                            <div class="stock-info <?= $product['stock'] < 5 ? 'low-stock' : '' ?>">
+                                <?= $product['stock'] > 0 ? "In stock: {$product['stock']}" : "Out of stock" ?>
+                            </div>
+                            <p class="product-desc"><?= htmlspecialchars($product['description']) ?></p>
+                        </div>
+                    </a>
+                    
+                    <div class="product-actions">
                         <div class="quantity-controls">
                             <button class="quantity-btn minus" data-product-id="<?= $product['id'] ?>">-</button>
                             <input type="number" class="quantity-input" value="1" min="1" max="<?= min(10, $product['stock']) ?>" 
@@ -392,8 +425,6 @@ $page_title = "Our Products" . ($category ? " - " . ucfirst($category) : "");
             <?php endif; ?>
         <?php endif; ?>
     </div>
-
-    <?php include __DIR__ . '/includes/footer.php'; ?>
 
     <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -520,5 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCartCount();
 });
 </script>
+
+<?php include __DIR__ . './includes/footer.php'; ?>
 </body>
 </html>

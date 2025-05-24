@@ -76,10 +76,10 @@ try {
 
     // Check if item already exists in cart
     if ($plant_id) {
-        $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE cart_id = ? AND plant_id = ?");
+        $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE cart_id = ? AND plant_id = ? AND item_type = 'plant'");
         $stmt->execute([$cart_id, $plant_id]);
     } else {
-        $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ?");
+        $stmt = $pdo->prepare("SELECT id, quantity FROM cart_items WHERE cart_id = ? AND product_id = ? AND item_type = 'product'");
         $stmt->execute([$cart_id, $product_id]);
     }
     
@@ -93,11 +93,11 @@ try {
     } else {
         // Add new item to cart
         if ($plant_id) {
-            $stmt = $pdo->prepare("INSERT INTO cart_items (cart_id, plant_id, quantity, item_type) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$cart_id, $plant_id, $quantity, $item_type]);
+            $stmt = $pdo->prepare("INSERT INTO cart_items (cart_id, plant_id, quantity, item_type) VALUES (?, ?, ?, 'plant')");
+            $stmt->execute([$cart_id, $plant_id, $quantity]);
         } else {
-            $stmt = $pdo->prepare("INSERT INTO cart_items (cart_id, product_id, quantity, item_type) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$cart_id, $product_id, $quantity, $item_type]);
+            $stmt = $pdo->prepare("INSERT INTO cart_items (cart_id, product_id, quantity, item_type) VALUES (?, ?, ?, 'product')");
+            $stmt->execute([$cart_id, $product_id, $quantity]);
         }
     }
 
